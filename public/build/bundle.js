@@ -4,6 +4,12 @@ var app = (function () {
     'use strict';
 
     function noop() { }
+    function assign(tar, src) {
+        // @ts-ignore
+        for (const k in src)
+            tar[k] = src[k];
+        return tar;
+    }
     function add_location(element, file, line, column, char) {
         element.__svelte_meta = {
             loc: { file, line, column, char }
@@ -23,6 +29,39 @@ var app = (function () {
     }
     function safe_not_equal(a, b) {
         return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+    }
+    function create_slot(definition, ctx, $$scope, fn) {
+        if (definition) {
+            const slot_ctx = get_slot_context(definition, ctx, $$scope, fn);
+            return definition[0](slot_ctx);
+        }
+    }
+    function get_slot_context(definition, ctx, $$scope, fn) {
+        return definition[1] && fn
+            ? assign($$scope.ctx.slice(), definition[1](fn(ctx)))
+            : $$scope.ctx;
+    }
+    function get_slot_changes(definition, $$scope, dirty, fn) {
+        if (definition[2] && fn) {
+            const lets = definition[2](fn(dirty));
+            if (typeof $$scope.dirty === 'object') {
+                const merged = [];
+                const len = Math.max($$scope.dirty.length, lets.length);
+                for (let i = 0; i < len; i += 1) {
+                    merged[i] = $$scope.dirty[i] | lets[i];
+                }
+                return merged;
+            }
+            return $$scope.dirty | lets;
+        }
+        return $$scope.dirty;
+    }
+    function exclude_internal_props(props) {
+        const result = {};
+        for (const k in props)
+            if (k[0] !== '$')
+                result[k] = props[k];
+        return result;
     }
 
     function append(target, node) {
@@ -49,11 +88,32 @@ var app = (function () {
     function space() {
         return text(' ');
     }
+    function empty() {
+        return text('');
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
+    }
+    function set_attributes(node, attributes) {
+        // @ts-ignore
+        const descriptors = Object.getOwnPropertyDescriptors(node.__proto__);
+        for (const key in attributes) {
+            if (attributes[key] == null) {
+                node.removeAttribute(key);
+            }
+            else if (key === 'style') {
+                node.style.cssText = attributes[key];
+            }
+            else if (descriptors[key] && descriptors[key].set) {
+                node[key] = attributes[key];
+            }
+            else {
+                attr(node, key, attributes[key]);
+            }
+        }
     }
     function set_custom_element_data(node, prop, value) {
         if (prop in node) {
@@ -145,6 +205,19 @@ var app = (function () {
     }
     const outroing = new Set();
     let outros;
+    function group_outros() {
+        outros = {
+            r: 0,
+            c: [],
+            p: outros // parent group
+        };
+    }
+    function check_outros() {
+        if (!outros.r) {
+            run_all(outros.c);
+        }
+        outros = outros.p;
+    }
     function transition_in(block, local) {
         if (block && block.i) {
             outroing.delete(block);
@@ -169,6 +242,40 @@ var app = (function () {
     }
 
     const globals = (typeof window !== 'undefined' ? window : global);
+
+    function get_spread_update(levels, updates) {
+        const update = {};
+        const to_null_out = {};
+        const accounted_for = { $$scope: 1 };
+        let i = levels.length;
+        while (i--) {
+            const o = levels[i];
+            const n = updates[i];
+            if (n) {
+                for (const key in o) {
+                    if (!(key in n))
+                        to_null_out[key] = 1;
+                }
+                for (const key in n) {
+                    if (!accounted_for[key]) {
+                        update[key] = n[key];
+                        accounted_for[key] = 1;
+                    }
+                }
+                levels[i] = n;
+            }
+            else {
+                for (const key in o) {
+                    accounted_for[key] = 1;
+                }
+            }
+        }
+        for (const key in to_null_out) {
+            if (!(key in update))
+                update[key] = undefined;
+        }
+        return update;
+    }
 
     function bind(component, name, callback) {
         const index = component.$$.props[name];
@@ -293,7 +400,7 @@ var app = (function () {
     }
 
     function dispatch_dev(type, detail) {
-        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.17.0' }, detail)));
+        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.17.1' }, detail)));
     }
     function append_dev(target, node) {
         dispatch_dev("SvelteDOMInsert", { target, node });
@@ -2823,14 +2930,14 @@ var app = (function () {
       guardedConsole('info', 'The above ' + status + ' is totally normal. ' + str);
     }
 
-    var assign;
+    var assign$1;
     {
       if (typeof Object.assign === 'function') {
-        assign = Object.assign;
+        assign$1 = Object.assign;
       } else {
         // lite Object.assign polyfill based on
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
-        assign = function (target) {
+        assign$1 = function (target) {
           var to = Object(target);
 
           for (var index = 1; index < arguments.length; index++) {
@@ -2850,7 +2957,7 @@ var app = (function () {
       }
     }
 
-    var $inject_Object_assign = assign;
+    var $inject_Object_assign = assign$1;
 
     inherits_browser(PouchError, Error);
 
@@ -12498,7 +12605,7 @@ var app = (function () {
       .plugin(mapreduce)
       .plugin(replication);
 
-    /* src/DB.svelte generated by Svelte v3.17.0 */
+    /* src/DB.svelte generated by Svelte v3.17.1 */
 
     const { console: console_1 } = globals;
 
@@ -29430,6 +29537,7 @@ var app = (function () {
     const isDirective = (o) => {
         return typeof o === 'function' && directives.has(o);
     };
+    //# sourceMappingURL=directive.js.map
 
     /**
      * @license
@@ -29461,6 +29569,7 @@ var app = (function () {
             start = n;
         }
     };
+    //# sourceMappingURL=dom.js.map
 
     /**
      * @license
@@ -29484,6 +29593,7 @@ var app = (function () {
      * A sentinel value that signals a NodePart to fully clear its content.
      */
     const nothing = {};
+    //# sourceMappingURL=part.js.map
 
     /**
      * @license
@@ -29697,6 +29807,7 @@ var app = (function () {
      *    * (') then any non-(')
      */
     const lastAttributeNameRegex = /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
+    //# sourceMappingURL=template.js.map
 
     /**
      * @license
@@ -29829,6 +29940,7 @@ var app = (function () {
             return fragment;
         }
     }
+    //# sourceMappingURL=template-instance.js.map
 
     /**
      * @license
@@ -29917,6 +30029,7 @@ var app = (function () {
             return template;
         }
     }
+    //# sourceMappingURL=template-result.js.map
 
     /**
      * @license
@@ -30356,6 +30469,7 @@ var app = (function () {
         (eventOptionsSupported ?
             { capture: o.capture, passive: o.passive, once: o.once } :
             o.capture);
+    //# sourceMappingURL=parts.js.map
 
     /**
      * @license
@@ -30407,6 +30521,7 @@ var app = (function () {
         }
     }
     const defaultTemplateProcessor = new DefaultTemplateProcessor();
+    //# sourceMappingURL=default-template-processor.js.map
 
     /**
      * @license
@@ -30454,6 +30569,7 @@ var app = (function () {
         return template;
     }
     const templateCaches = new Map();
+    //# sourceMappingURL=template-factory.js.map
 
     /**
      * @license
@@ -30494,6 +30610,7 @@ var app = (function () {
         part.setValue(result);
         part.commit();
     };
+    //# sourceMappingURL=render.js.map
 
     /**
      * @license
@@ -30517,6 +30634,7 @@ var app = (function () {
      * render to and update a container.
      */
     const html$1 = (strings, ...values) => new TemplateResult(strings, values, 'html', defaultTemplateProcessor);
+    //# sourceMappingURL=lit-html.js.map
 
     /**
      * @license
@@ -30641,6 +30759,7 @@ var app = (function () {
             }
         }
     }
+    //# sourceMappingURL=modify-template.js.map
 
     /**
      * @license
@@ -30910,6 +31029,7 @@ var app = (function () {
             window.ShadyCSS.styleElement(container.host);
         }
     };
+    //# sourceMappingURL=shady-render.js.map
 
     /**
      * @license
@@ -31535,6 +31655,7 @@ var app = (function () {
      * Marks class as having finished creating properties.
      */
     UpdatingElement[_a] = true;
+    //# sourceMappingURL=updating-element.js.map
 
     /**
      * @license
@@ -31665,6 +31786,7 @@ var app = (function () {
         key: element.key,
         descriptor,
     });
+    //# sourceMappingURL=decorators.js.map
 
     /**
     @license
@@ -31728,6 +31850,7 @@ var app = (function () {
         const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
         return new CSSResult(cssText, constructionToken);
     };
+    //# sourceMappingURL=css-tag.js.map
 
     /**
      * @license
@@ -31925,6 +32048,7 @@ var app = (function () {
      * @nocollapse
      */
     LitElement.render = render$1;
+    //# sourceMappingURL=lit-element.js.map
 
     /**
      * @license
@@ -31976,6 +32100,7 @@ var app = (function () {
         }
         return supportsPassive_ ? { passive: true } : false;
     }
+    //# sourceMappingURL=events.js.map
 
     /**
      * @license
@@ -32005,6 +32130,7 @@ var app = (function () {
             || element.msMatchesSelector;
         return nativeMatches.call(element, selector);
     }
+    //# sourceMappingURL=ponyfill.js.map
 
     /**
      * @license
@@ -32078,6 +32204,7 @@ var app = (function () {
         };
         return MDCFoundation;
     }());
+    //# sourceMappingURL=foundation.js.map
 
     /**
      * @license
@@ -32126,6 +32253,7 @@ var app = (function () {
         PADDING: 10,
         TAP_DELAY_MS: 300,
     };
+    //# sourceMappingURL=constants.js.map
 
     /**
      * Stores result from supportsCssVariables to avoid redundant processing to
@@ -32201,6 +32329,7 @@ var app = (function () {
         }
         return { x: normalizedX, y: normalizedY };
     }
+    //# sourceMappingURL=util.js.map
 
     /**
      * @license
@@ -32662,6 +32791,7 @@ var app = (function () {
         };
         return MDCRippleFoundation;
     }(MDCFoundation));
+    //# sourceMappingURL=foundation.js.map
 
     /**
     @license
@@ -32680,6 +32810,7 @@ var app = (function () {
     limitations under the License.
     */
     const style$1 = css `@keyframes mdc-ripple-fg-radius-in{from{animation-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transform:translate(var(--mdc-ripple-fg-translate-start, 0)) scale(1)}to{transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}}@keyframes mdc-ripple-fg-opacity-in{from{animation-timing-function:linear;opacity:0}to{opacity:var(--mdc-ripple-fg-opacity, 0)}}@keyframes mdc-ripple-fg-opacity-out{from{animation-timing-function:linear;opacity:var(--mdc-ripple-fg-opacity, 0)}to{opacity:0}}`;
+    //# sourceMappingURL=mwc-ripple-global-css.js.map
 
     /**
     @license
@@ -32799,6 +32930,7 @@ var app = (function () {
             rippleFoundation.deactivate();
         }
     });
+    //# sourceMappingURL=ripple-directive.js.map
 
     /**
      * @license
@@ -32860,6 +32992,7 @@ var app = (function () {
         }
         classMapCache.set(part, classInfo);
     });
+    //# sourceMappingURL=class-map.js.map
 
     class ButtonBase extends LitElement {
         constructor() {
@@ -32946,6 +33079,7 @@ var app = (function () {
     __decorate([
         query$1('#button')
     ], ButtonBase.prototype, "buttonElement", void 0);
+    //# sourceMappingURL=mwc-button-base.js.map
 
     /**
     @license
@@ -32964,6 +33098,7 @@ var app = (function () {
     limitations under the License.
     */
     const style$2 = css `.mdc-touch-target-wrapper{display:inline}.mdc-elevation-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);border-radius:inherit;opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-elevation-overlay{background-color:#fff}.mdc-button{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:.875rem;line-height:2.25rem;font-weight:500;letter-spacing:.0892857143em;text-decoration:none;text-transform:uppercase;padding:0 8px 0 8px;position:relative;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:64px;border:none;outline:none;line-height:inherit;user-select:none;-webkit-appearance:none;overflow:visible;vertical-align:middle;border-radius:4px}.mdc-button .mdc-elevation-overlay{width:100%;height:100%}.mdc-button::-moz-focus-inner{padding:0;border:0}.mdc-button:active{outline:none}.mdc-button:hover{cursor:pointer}.mdc-button:disabled{cursor:default;pointer-events:none}.mdc-button .mdc-button__ripple{border-radius:4px}.mdc-button:not(:disabled){background-color:transparent}.mdc-button:disabled{background-color:transparent}.mdc-button .mdc-button__icon{margin-left:0;margin-right:8px;display:inline-block;width:18px;height:18px;font-size:18px;vertical-align:top}[dir=rtl] .mdc-button .mdc-button__icon,.mdc-button .mdc-button__icon[dir=rtl]{margin-left:8px;margin-right:0}.mdc-button .mdc-button__touch{position:absolute;top:50%;right:0;height:48px;left:0;transform:translateY(-50%)}.mdc-button:not(:disabled){color:#6200ee;color:var(--mdc-theme-primary, #6200ee)}.mdc-button:disabled{color:rgba(0,0,0,.37)}.mdc-button__label+.mdc-button__icon{margin-left:8px;margin-right:0}[dir=rtl] .mdc-button__label+.mdc-button__icon,.mdc-button__label+.mdc-button__icon[dir=rtl]{margin-left:0;margin-right:8px}svg.mdc-button__icon{fill:currentColor}.mdc-button--raised .mdc-button__icon,.mdc-button--unelevated .mdc-button__icon,.mdc-button--outlined .mdc-button__icon{margin-left:-4px;margin-right:8px}[dir=rtl] .mdc-button--raised .mdc-button__icon,.mdc-button--raised .mdc-button__icon[dir=rtl],[dir=rtl] .mdc-button--unelevated .mdc-button__icon,.mdc-button--unelevated .mdc-button__icon[dir=rtl],[dir=rtl] .mdc-button--outlined .mdc-button__icon,.mdc-button--outlined .mdc-button__icon[dir=rtl]{margin-left:8px;margin-right:-4px}.mdc-button--raised .mdc-button__label+.mdc-button__icon,.mdc-button--unelevated .mdc-button__label+.mdc-button__icon,.mdc-button--outlined .mdc-button__label+.mdc-button__icon{margin-left:8px;margin-right:-4px}[dir=rtl] .mdc-button--raised .mdc-button__label+.mdc-button__icon,.mdc-button--raised .mdc-button__label+.mdc-button__icon[dir=rtl],[dir=rtl] .mdc-button--unelevated .mdc-button__label+.mdc-button__icon,.mdc-button--unelevated .mdc-button__label+.mdc-button__icon[dir=rtl],[dir=rtl] .mdc-button--outlined .mdc-button__label+.mdc-button__icon,.mdc-button--outlined .mdc-button__label+.mdc-button__icon[dir=rtl]{margin-left:-4px;margin-right:8px}.mdc-button--raised,.mdc-button--unelevated{padding:0 16px 0 16px}.mdc-button--raised:not(:disabled),.mdc-button--unelevated:not(:disabled){background-color:#6200ee}@supports not (-ms-ime-align: auto){.mdc-button--raised:not(:disabled),.mdc-button--unelevated:not(:disabled){background-color:var(--mdc-theme-primary, #6200ee)}}.mdc-button--raised:not(:disabled),.mdc-button--unelevated:not(:disabled){color:#fff;color:var(--mdc-theme-on-primary, #fff)}.mdc-button--raised:disabled,.mdc-button--unelevated:disabled{background-color:rgba(0,0,0,.12)}.mdc-button--raised:disabled,.mdc-button--unelevated:disabled{color:rgba(0,0,0,.37)}.mdc-button--raised{box-shadow:0px 3px 1px -2px rgba(0, 0, 0, 0.2),0px 2px 2px 0px rgba(0, 0, 0, 0.14),0px 1px 5px 0px rgba(0,0,0,.12);transition:box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-button--raised:hover,.mdc-button--raised:focus{box-shadow:0px 2px 4px -1px rgba(0, 0, 0, 0.2),0px 4px 5px 0px rgba(0, 0, 0, 0.14),0px 1px 10px 0px rgba(0,0,0,.12)}.mdc-button--raised:active{box-shadow:0px 5px 5px -3px rgba(0, 0, 0, 0.2),0px 8px 10px 1px rgba(0, 0, 0, 0.14),0px 3px 14px 2px rgba(0,0,0,.12)}.mdc-button--raised:disabled{box-shadow:0px 0px 0px 0px rgba(0, 0, 0, 0.2),0px 0px 0px 0px rgba(0, 0, 0, 0.14),0px 0px 0px 0px rgba(0,0,0,.12)}.mdc-button--outlined{padding:0 15px 0 15px;border-width:1px;border-style:solid}.mdc-button--outlined .mdc-button__ripple{top:-1px;left:-1px;border:1px solid transparent}.mdc-button--outlined:not(:disabled){border-color:#6200ee;border-color:var(--mdc-theme-primary, #6200ee)}.mdc-button--outlined:disabled{border-color:rgba(0,0,0,.37)}.mdc-button--touch{margin-top:6px;margin-bottom:6px}@keyframes mdc-ripple-fg-radius-in{from{animation-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transform:translate(var(--mdc-ripple-fg-translate-start, 0)) scale(1)}to{transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}}@keyframes mdc-ripple-fg-opacity-in{from{animation-timing-function:linear;opacity:0}to{opacity:var(--mdc-ripple-fg-opacity, 0)}}@keyframes mdc-ripple-fg-opacity-out{from{animation-timing-function:linear;opacity:var(--mdc-ripple-fg-opacity, 0)}to{opacity:0}}.mdc-ripple-surface--test-edge-var-bug{--mdc-ripple-surface-test-edge-var: 1px solid #000;visibility:hidden}.mdc-ripple-surface--test-edge-var-bug::before{border:var(--mdc-ripple-surface-test-edge-var)}.mdc-button{--mdc-ripple-fg-size: 0;--mdc-ripple-left: 0;--mdc-ripple-top: 0;--mdc-ripple-fg-scale: 1;--mdc-ripple-fg-translate-end: 0;--mdc-ripple-fg-translate-start: 0;-webkit-tap-highlight-color:rgba(0,0,0,0)}.mdc-button .mdc-button__ripple::before,.mdc-button .mdc-button__ripple::after{position:absolute;border-radius:50%;opacity:0;pointer-events:none;content:""}.mdc-button .mdc-button__ripple::before{transition:opacity 15ms linear,background-color 15ms linear;z-index:1}.mdc-button.mdc-ripple-upgraded .mdc-button__ripple::before{transform:scale(var(--mdc-ripple-fg-scale, 1))}.mdc-button.mdc-ripple-upgraded .mdc-button__ripple::after{top:0;left:0;transform:scale(0);transform-origin:center center}.mdc-button.mdc-ripple-upgraded--unbounded .mdc-button__ripple::after{top:var(--mdc-ripple-top, 0);left:var(--mdc-ripple-left, 0)}.mdc-button.mdc-ripple-upgraded--foreground-activation .mdc-button__ripple::after{animation:mdc-ripple-fg-radius-in 225ms forwards,mdc-ripple-fg-opacity-in 75ms forwards}.mdc-button.mdc-ripple-upgraded--foreground-deactivation .mdc-button__ripple::after{animation:mdc-ripple-fg-opacity-out 150ms;transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}.mdc-button .mdc-button__ripple::before,.mdc-button .mdc-button__ripple::after{top:calc(50% - 100%);left:calc(50% - 100%);width:200%;height:200%}.mdc-button.mdc-ripple-upgraded .mdc-button__ripple::after{width:var(--mdc-ripple-fg-size, 100%);height:var(--mdc-ripple-fg-size, 100%)}.mdc-button .mdc-button__ripple::before,.mdc-button .mdc-button__ripple::after{background-color:#6200ee}@supports not (-ms-ime-align: auto){.mdc-button .mdc-button__ripple::before,.mdc-button .mdc-button__ripple::after{background-color:var(--mdc-theme-primary, #6200ee)}}.mdc-button:hover .mdc-button__ripple::before{opacity:.04}.mdc-button.mdc-ripple-upgraded--background-focused .mdc-button__ripple::before,.mdc-button:not(.mdc-ripple-upgraded):focus .mdc-button__ripple::before{transition-duration:75ms;opacity:.12}.mdc-button:not(.mdc-ripple-upgraded) .mdc-button__ripple::after{transition:opacity 150ms linear}.mdc-button:not(.mdc-ripple-upgraded):active .mdc-button__ripple::after{transition-duration:75ms;opacity:.12}.mdc-button.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: 0.12}.mdc-button .mdc-button__ripple{position:absolute;box-sizing:content-box;width:100%;height:100%;overflow:hidden}.mdc-button:not(.mdc-button--outlined) .mdc-button__ripple{top:0;left:0}.mdc-button--raised .mdc-button__ripple::before,.mdc-button--raised .mdc-button__ripple::after,.mdc-button--unelevated .mdc-button__ripple::before,.mdc-button--unelevated .mdc-button__ripple::after{background-color:#fff}@supports not (-ms-ime-align: auto){.mdc-button--raised .mdc-button__ripple::before,.mdc-button--raised .mdc-button__ripple::after,.mdc-button--unelevated .mdc-button__ripple::before,.mdc-button--unelevated .mdc-button__ripple::after{background-color:var(--mdc-theme-on-primary, #fff)}}.mdc-button--raised:hover .mdc-button__ripple::before,.mdc-button--unelevated:hover .mdc-button__ripple::before{opacity:.08}.mdc-button--raised.mdc-ripple-upgraded--background-focused .mdc-button__ripple::before,.mdc-button--raised:not(.mdc-ripple-upgraded):focus .mdc-button__ripple::before,.mdc-button--unelevated.mdc-ripple-upgraded--background-focused .mdc-button__ripple::before,.mdc-button--unelevated:not(.mdc-ripple-upgraded):focus .mdc-button__ripple::before{transition-duration:75ms;opacity:.24}.mdc-button--raised:not(.mdc-ripple-upgraded) .mdc-button__ripple::after,.mdc-button--unelevated:not(.mdc-ripple-upgraded) .mdc-button__ripple::after{transition:opacity 150ms linear}.mdc-button--raised:not(.mdc-ripple-upgraded):active .mdc-button__ripple::after,.mdc-button--unelevated:not(.mdc-ripple-upgraded):active .mdc-button__ripple::after{transition-duration:75ms;opacity:.24}.mdc-button--raised.mdc-ripple-upgraded,.mdc-button--unelevated.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: 0.24}.mdc-button{height:36px}.material-icons{font-family:var(--mdc-icon-font, "Material Icons");font-weight:normal;font-style:normal;font-size:var(--mdc-icon-size, 24px);line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale;font-feature-settings:"liga"}:host{display:inline-flex;outline:none;vertical-align:top}:host([disabled]){pointer-events:none}.mdc-button{flex:auto;text-transform:var(--mdc-button-text-transform, uppercase);letter-spacing:var(--mdc-button-letter-spacing, 0.0892857143em);padding:0 var(--mdc-button-horizontal-padding, 8px) 0 var(--mdc-button-horizontal-padding, 8px)}.mdc-button.mdc-button--raised,.mdc-button.mdc-button--unelevated{padding:0 var(--mdc-button-horizontal-padding, 16px) 0 var(--mdc-button-horizontal-padding, 16px)}.mdc-button.mdc-button--outlined{padding:0 calc(var(--mdc-button-horizontal-padding, 16px) - var(--mdc-button-outline-width, 1px)) 0 calc(var(--mdc-button-horizontal-padding, 16px) - var(--mdc-button-outline-width, 1px));border-width:var(--mdc-button-outline-width, 1px);border-color:var(--mdc-button-outline-color, var(--mdc-theme-primary, #6200ee))}:host([disabled]) .mdc-button.mdc-button--raised,:host([disabled]) .mdc-button.mdc-button--unelevated{background-color:var(--mdc-button-disabled-fill-color, rgba(0, 0, 0, 0.12));color:var(--mdc-button-disabled-ink-color, rgba(0, 0, 0, 0.37))}:host([disabled]) .mdc-button:not(.mdc-button--raised):not(.mdc-button--unelevated){color:var(--mdc-button-disabled-ink-color, rgba(0, 0, 0, 0.37))}:host([disabled]) .mdc-button.mdc-button--outlined{border-color:var(--mdc-button-disabled-ink-color, rgba(0, 0, 0, 0.37));border-color:var(--mdc-button-disabled-outline-color, var(--mdc-button-disabled-ink-color, rgba(0, 0, 0, 0.37)))}`;
+    //# sourceMappingURL=mwc-button-css.js.map
 
     let Button = class Button extends ButtonBase {
     };
@@ -32971,6 +33106,555 @@ var app = (function () {
     Button = __decorate([
         customElement('mwc-button')
     ], Button);
+    //# sourceMappingURL=mwc-button.js.map
+
+    function toVal(mix) {
+    	var k, y, str='';
+    	if (mix) {
+    		if (typeof mix === 'object') {
+    			if (!!mix.push) {
+    				for (k=0; k < mix.length; k++) {
+    					if (mix[k] && (y = toVal(mix[k]))) {
+    						str && (str += ' ');
+    						str += y;
+    					}
+    				}
+    			} else {
+    				for (k in mix) {
+    					if (mix[k] && (y = toVal(k))) {
+    						str && (str += ' ');
+    						str += y;
+    					}
+    				}
+    			}
+    		} else if (typeof mix !== 'boolean' && !mix.call) {
+    			str && (str += ' ');
+    			str += mix;
+    		}
+    	}
+    	return str;
+    }
+
+    function clsx () {
+    	var i=0, x, str='';
+    	while (i < arguments.length) {
+    		if (x = toVal(arguments[i++])) {
+    			str && (str += ' ');
+    			str += x;
+    		}
+    	}
+    	return str;
+    }
+
+    function isObject(value) {
+      const type = typeof value;
+      return value != null && (type == 'object' || type == 'function');
+    }
+
+    function getColumnSizeClass(isXs, colWidth, colSize) {
+      if (colSize === true || colSize === '') {
+        return isXs ? 'col' : `col-${colWidth}`;
+      } else if (colSize === 'auto') {
+        return isXs ? 'col-auto' : `col-${colWidth}-auto`;
+      }
+
+      return isXs ? `col-${colSize}` : `col-${colWidth}-${colSize}`;
+    }
+
+    function clean$1($$props) {
+      const rest = {};
+      for (const key of Object.keys($$props)) {
+        if (key !== "children" && key !== "$$scope" && key !== "$$slots") {
+          rest[key] = $$props[key];
+        }
+      }
+      return rest;
+    }
+
+    /* node_modules/sveltestrap/src/Col.svelte generated by Svelte v3.17.1 */
+    const file = "node_modules/sveltestrap/src/Col.svelte";
+
+    function create_fragment$1(ctx) {
+    	let div;
+    	let current;
+    	const default_slot_template = /*$$slots*/ ctx[7].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[6], null);
+
+    	let div_levels = [
+    		/*props*/ ctx[1],
+    		{ id: /*id*/ ctx[0] },
+    		{ class: /*colClasses*/ ctx[2].join(" ") }
+    	];
+
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			if (default_slot) default_slot.c();
+    			set_attributes(div, div_data);
+    			add_location(div, file, 51, 0, 1305);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(div, null);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot && default_slot.p && dirty & /*$$scope*/ 64) {
+    				default_slot.p(get_slot_context(default_slot_template, ctx, /*$$scope*/ ctx[6], null), get_slot_changes(default_slot_template, /*$$scope*/ ctx[6], dirty, null));
+    			}
+
+    			set_attributes(div, get_spread_update(div_levels, [
+    				dirty & /*props*/ 2 && /*props*/ ctx[1],
+    				dirty & /*id*/ 1 && ({ id: /*id*/ ctx[0] }),
+    				dirty & /*colClasses*/ 4 && ({ class: /*colClasses*/ ctx[2].join(" ") })
+    			]));
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			if (default_slot) default_slot.d(detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$1.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$1($$self, $$props, $$invalidate) {
+    	let { class: className = "" } = $$props;
+    	let { id = "" } = $$props;
+    	const props = clean$1($$props);
+    	const colClasses = [];
+    	const widths = ["xs", "sm", "md", "lg", "xl"];
+
+    	widths.forEach(colWidth => {
+    		const columnProp = $$props[colWidth];
+
+    		if (!columnProp && columnProp !== "") {
+    			return;
+    		}
+
+    		const isXs = colWidth === "xs";
+
+    		if (isObject(columnProp)) {
+    			const colSizeInterfix = isXs ? "-" : `-${colWidth}-`;
+    			const colClass = getColumnSizeClass(isXs, colWidth, columnProp.size);
+
+    			if (columnProp.size || columnProp.size === "") {
+    				colClasses.push(colClass);
+    			}
+
+    			if (columnProp.push) {
+    				colClasses.push(`push${colSizeInterfix}${columnProp.push}`);
+    			}
+
+    			if (columnProp.pull) {
+    				colClasses.push(`pull${colSizeInterfix}${columnProp.pull}`);
+    			}
+
+    			if (columnProp.offset) {
+    				colClasses.push(`offset${colSizeInterfix}${columnProp.offset}`);
+    			}
+    		} else {
+    			colClasses.push(getColumnSizeClass(isXs, colWidth, columnProp));
+    		}
+    	});
+
+    	if (!colClasses.length) {
+    		colClasses.push("col");
+    	}
+
+    	if (className) {
+    		colClasses.push(className);
+    	}
+
+    	let { $$slots = {}, $$scope } = $$props;
+
+    	$$self.$set = $$new_props => {
+    		$$invalidate(5, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
+    		if ("class" in $$new_props) $$invalidate(3, className = $$new_props.class);
+    		if ("id" in $$new_props) $$invalidate(0, id = $$new_props.id);
+    		if ("$$scope" in $$new_props) $$invalidate(6, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => {
+    		return { className, id };
+    	};
+
+    	$$self.$inject_state = $$new_props => {
+    		$$invalidate(5, $$props = assign(assign({}, $$props), $$new_props));
+    		if ("className" in $$props) $$invalidate(3, className = $$new_props.className);
+    		if ("id" in $$props) $$invalidate(0, id = $$new_props.id);
+    	};
+
+    	$$props = exclude_internal_props($$props);
+    	return [id, props, colClasses, className, widths, $$props, $$scope, $$slots];
+    }
+
+    class Col extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { class: 3, id: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Col",
+    			options,
+    			id: create_fragment$1.name
+    		});
+    	}
+
+    	get class() {
+    		throw new Error("<Col>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set class(value) {
+    		throw new Error("<Col>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get id() {
+    		throw new Error("<Col>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set id(value) {
+    		throw new Error("<Col>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* node_modules/sveltestrap/src/Container.svelte generated by Svelte v3.17.1 */
+    const file$1 = "node_modules/sveltestrap/src/Container.svelte";
+
+    function create_fragment$2(ctx) {
+    	let div;
+    	let current;
+    	const default_slot_template = /*$$slots*/ ctx[7].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[6], null);
+    	let div_levels = [/*props*/ ctx[2], { id: /*id*/ ctx[0] }, { class: /*classes*/ ctx[1] }];
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			if (default_slot) default_slot.c();
+    			set_attributes(div, div_data);
+    			add_location(div, file$1, 14, 0, 295);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(div, null);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot && default_slot.p && dirty & /*$$scope*/ 64) {
+    				default_slot.p(get_slot_context(default_slot_template, ctx, /*$$scope*/ ctx[6], null), get_slot_changes(default_slot_template, /*$$scope*/ ctx[6], dirty, null));
+    			}
+
+    			set_attributes(div, get_spread_update(div_levels, [
+    				dirty & /*props*/ 4 && /*props*/ ctx[2],
+    				dirty & /*id*/ 1 && ({ id: /*id*/ ctx[0] }),
+    				dirty & /*classes*/ 2 && ({ class: /*classes*/ ctx[1] })
+    			]));
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			if (default_slot) default_slot.d(detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$2.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	let { class: className = "" } = $$props;
+    	let { fluid = false } = $$props;
+    	let { id = "" } = $$props;
+    	const props = clean$1($$props);
+    	let { $$slots = {}, $$scope } = $$props;
+
+    	$$self.$set = $$new_props => {
+    		$$invalidate(5, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
+    		if ("class" in $$new_props) $$invalidate(3, className = $$new_props.class);
+    		if ("fluid" in $$new_props) $$invalidate(4, fluid = $$new_props.fluid);
+    		if ("id" in $$new_props) $$invalidate(0, id = $$new_props.id);
+    		if ("$$scope" in $$new_props) $$invalidate(6, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => {
+    		return { className, fluid, id, classes };
+    	};
+
+    	$$self.$inject_state = $$new_props => {
+    		$$invalidate(5, $$props = assign(assign({}, $$props), $$new_props));
+    		if ("className" in $$props) $$invalidate(3, className = $$new_props.className);
+    		if ("fluid" in $$props) $$invalidate(4, fluid = $$new_props.fluid);
+    		if ("id" in $$props) $$invalidate(0, id = $$new_props.id);
+    		if ("classes" in $$props) $$invalidate(1, classes = $$new_props.classes);
+    	};
+
+    	let classes;
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*className, fluid*/ 24) {
+    			 $$invalidate(1, classes = clsx(className, fluid ? "container-fluid" : "container"));
+    		}
+    	};
+
+    	$$props = exclude_internal_props($$props);
+    	return [id, classes, props, className, fluid, $$props, $$scope, $$slots];
+    }
+
+    class Container extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { class: 3, fluid: 4, id: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Container",
+    			options,
+    			id: create_fragment$2.name
+    		});
+    	}
+
+    	get class() {
+    		throw new Error("<Container>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set class(value) {
+    		throw new Error("<Container>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get fluid() {
+    		throw new Error("<Container>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set fluid(value) {
+    		throw new Error("<Container>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get id() {
+    		throw new Error("<Container>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set id(value) {
+    		throw new Error("<Container>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* node_modules/sveltestrap/src/Row.svelte generated by Svelte v3.17.1 */
+    const file$2 = "node_modules/sveltestrap/src/Row.svelte";
+
+    function create_fragment$3(ctx) {
+    	let div;
+    	let current;
+    	const default_slot_template = /*$$slots*/ ctx[8].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[7], null);
+    	let div_levels = [/*props*/ ctx[2], { id: /*id*/ ctx[0] }, { class: /*classes*/ ctx[1] }];
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			if (default_slot) default_slot.c();
+    			set_attributes(div, div_data);
+    			add_location(div, file$2, 19, 0, 361);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(div, null);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot && default_slot.p && dirty & /*$$scope*/ 128) {
+    				default_slot.p(get_slot_context(default_slot_template, ctx, /*$$scope*/ ctx[7], null), get_slot_changes(default_slot_template, /*$$scope*/ ctx[7], dirty, null));
+    			}
+
+    			set_attributes(div, get_spread_update(div_levels, [
+    				dirty & /*props*/ 4 && /*props*/ ctx[2],
+    				dirty & /*id*/ 1 && ({ id: /*id*/ ctx[0] }),
+    				dirty & /*classes*/ 2 && ({ class: /*classes*/ ctx[1] })
+    			]));
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			if (default_slot) default_slot.d(detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let { class: className = "" } = $$props;
+    	let { noGutters = false } = $$props;
+    	let { form = false } = $$props;
+    	let { id = "" } = $$props;
+    	const props = clean$1($$props);
+    	let { $$slots = {}, $$scope } = $$props;
+
+    	$$self.$set = $$new_props => {
+    		$$invalidate(6, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
+    		if ("class" in $$new_props) $$invalidate(3, className = $$new_props.class);
+    		if ("noGutters" in $$new_props) $$invalidate(4, noGutters = $$new_props.noGutters);
+    		if ("form" in $$new_props) $$invalidate(5, form = $$new_props.form);
+    		if ("id" in $$new_props) $$invalidate(0, id = $$new_props.id);
+    		if ("$$scope" in $$new_props) $$invalidate(7, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => {
+    		return { className, noGutters, form, id, classes };
+    	};
+
+    	$$self.$inject_state = $$new_props => {
+    		$$invalidate(6, $$props = assign(assign({}, $$props), $$new_props));
+    		if ("className" in $$props) $$invalidate(3, className = $$new_props.className);
+    		if ("noGutters" in $$props) $$invalidate(4, noGutters = $$new_props.noGutters);
+    		if ("form" in $$props) $$invalidate(5, form = $$new_props.form);
+    		if ("id" in $$props) $$invalidate(0, id = $$new_props.id);
+    		if ("classes" in $$props) $$invalidate(1, classes = $$new_props.classes);
+    	};
+
+    	let classes;
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*className, noGutters, form*/ 56) {
+    			 $$invalidate(1, classes = clsx(className, noGutters ? "no-gutters" : null, form ? "form-row" : "row"));
+    		}
+    	};
+
+    	$$props = exclude_internal_props($$props);
+    	return [id, classes, props, className, noGutters, form, $$props, $$scope, $$slots];
+    }
+
+    class Row extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { class: 3, noGutters: 4, form: 5, id: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Row",
+    			options,
+    			id: create_fragment$3.name
+    		});
+    	}
+
+    	get class() {
+    		throw new Error("<Row>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set class(value) {
+    		throw new Error("<Row>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get noGutters() {
+    		throw new Error("<Row>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set noGutters(value) {
+    		throw new Error("<Row>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get form() {
+    		throw new Error("<Row>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set form(value) {
+    		throw new Error("<Row>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get id() {
+    		throw new Error("<Row>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set id(value) {
+    		throw new Error("<Row>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
 
     class IconButtonBase extends LitElement {
         constructor() {
@@ -32999,6 +33683,7 @@ var app = (function () {
     __decorate([
         property({ type: String })
     ], IconButtonBase.prototype, "label", void 0);
+    //# sourceMappingURL=mwc-icon-button-base.js.map
 
     /**
     @license
@@ -33017,6 +33702,7 @@ var app = (function () {
     limitations under the License.
     */
     const style$3 = css `.mdc-icon-button{display:inline-block;position:relative;box-sizing:border-box;border:none;outline:none;background-color:transparent;fill:currentColor;color:inherit;font-size:24px;text-decoration:none;cursor:pointer;user-select:none;width:48px;height:48px;padding:12px}.mdc-icon-button svg,.mdc-icon-button img{width:24px;height:24px}.mdc-icon-button:disabled{color:rgba(0,0,0,.38);color:var(--mdc-theme-text-disabled-on-light, rgba(0, 0, 0, 0.38))}.mdc-icon-button:disabled{cursor:default;pointer-events:none}.mdc-icon-button__icon{display:inline-block}.mdc-icon-button__icon.mdc-icon-button__icon--on{display:none}.mdc-icon-button--on .mdc-icon-button__icon{display:none}.mdc-icon-button--on .mdc-icon-button__icon.mdc-icon-button__icon--on{display:inline-block}@keyframes mdc-ripple-fg-radius-in{from{animation-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transform:translate(var(--mdc-ripple-fg-translate-start, 0)) scale(1)}to{transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}}@keyframes mdc-ripple-fg-opacity-in{from{animation-timing-function:linear;opacity:0}to{opacity:var(--mdc-ripple-fg-opacity, 0)}}@keyframes mdc-ripple-fg-opacity-out{from{animation-timing-function:linear;opacity:var(--mdc-ripple-fg-opacity, 0)}to{opacity:0}}.mdc-ripple-surface--test-edge-var-bug{--mdc-ripple-surface-test-edge-var: 1px solid #000;visibility:hidden}.mdc-ripple-surface--test-edge-var-bug::before{border:var(--mdc-ripple-surface-test-edge-var)}.mdc-icon-button{--mdc-ripple-fg-size: 0;--mdc-ripple-left: 0;--mdc-ripple-top: 0;--mdc-ripple-fg-scale: 1;--mdc-ripple-fg-translate-end: 0;--mdc-ripple-fg-translate-start: 0;-webkit-tap-highlight-color:rgba(0,0,0,0)}.mdc-icon-button::before,.mdc-icon-button::after{position:absolute;border-radius:50%;opacity:0;pointer-events:none;content:""}.mdc-icon-button::before{transition:opacity 15ms linear,background-color 15ms linear;z-index:1}.mdc-icon-button.mdc-ripple-upgraded::before{transform:scale(var(--mdc-ripple-fg-scale, 1))}.mdc-icon-button.mdc-ripple-upgraded::after{top:0;left:0;transform:scale(0);transform-origin:center center}.mdc-icon-button.mdc-ripple-upgraded--unbounded::after{top:var(--mdc-ripple-top, 0);left:var(--mdc-ripple-left, 0)}.mdc-icon-button.mdc-ripple-upgraded--foreground-activation::after{animation:mdc-ripple-fg-radius-in 225ms forwards,mdc-ripple-fg-opacity-in 75ms forwards}.mdc-icon-button.mdc-ripple-upgraded--foreground-deactivation::after{animation:mdc-ripple-fg-opacity-out 150ms;transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}.mdc-icon-button::before,.mdc-icon-button::after{top:calc(50% - 50%);left:calc(50% - 50%);width:100%;height:100%}.mdc-icon-button.mdc-ripple-upgraded::before,.mdc-icon-button.mdc-ripple-upgraded::after{top:var(--mdc-ripple-top, calc(50% - 50%));left:var(--mdc-ripple-left, calc(50% - 50%));width:var(--mdc-ripple-fg-size, 100%);height:var(--mdc-ripple-fg-size, 100%)}.mdc-icon-button.mdc-ripple-upgraded::after{width:var(--mdc-ripple-fg-size, 100%);height:var(--mdc-ripple-fg-size, 100%)}.mdc-icon-button::before,.mdc-icon-button::after{background-color:#000}.mdc-icon-button:hover::before{opacity:.04}.mdc-icon-button.mdc-ripple-upgraded--background-focused::before,.mdc-icon-button:not(.mdc-ripple-upgraded):focus::before{transition-duration:75ms;opacity:.12}.mdc-icon-button:not(.mdc-ripple-upgraded)::after{transition:opacity 150ms linear}.mdc-icon-button:not(.mdc-ripple-upgraded):active::after{transition-duration:75ms;opacity:.12}.mdc-icon-button.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: 0.12}.material-icons{font-family:var(--mdc-icon-font, "Material Icons");font-weight:normal;font-style:normal;font-size:var(--mdc-icon-size, 24px);line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale;font-feature-settings:"liga"}:host{display:inline-block;outline:none}:host,.mdc-icon-button{vertical-align:top}.mdc-icon-button{width:var(--mdc-icon-button-size, 48px);height:var(--mdc-icon-button-size, 48px);padding:calc((var(--mdc-icon-button-size, 48px) - var(--mdc-icon-size, 24px)) / 2)}.mdc-icon-button>i{position:absolute;top:0;padding-top:inherit}.mdc-icon-button i,.mdc-icon-button svg,.mdc-icon-button img,.mdc-icon-button ::slotted(*){display:block;width:var(--mdc-icon-size, 24px);height:var(--mdc-icon-size, 24px)}.mdc-ripple-upgraded:focus::before,.mdc-ripple-upgraded:focus::after{background-color:currentColor;background-color:var(--mdc-theme-on-primary, currentColor);opacity:.12;opacity:var(--mdc-icon-button-ripple-opacity, 0.12)}`;
+    //# sourceMappingURL=mwc-icon-button-css.js.map
 
     /**
     @license
@@ -33040,6 +33726,7 @@ var app = (function () {
     IconButton = __decorate([
         customElement('mwc-icon-button')
     ], IconButton);
+    //# sourceMappingURL=mwc-icon-button.js.map
 
     /**
      * @license
@@ -33081,6 +33768,7 @@ var app = (function () {
         ROOT_SELECTOR: '.mdc-top-app-bar',
         TITLE_SELECTOR: '.mdc-top-app-bar__title',
     };
+    //# sourceMappingURL=constants.js.map
 
     /**
      * @license
@@ -33161,6 +33849,7 @@ var app = (function () {
         };
         return MDCTopAppBarBaseFoundation;
     }(MDCFoundation));
+    //# sourceMappingURL=foundation.js.map
 
     /**
      * @license
@@ -33323,6 +34012,7 @@ var app = (function () {
         };
         return MDCTopAppBarFoundation;
     }(MDCTopAppBarBaseFoundation));
+    //# sourceMappingURL=foundation.js.map
 
     /**
     @license
@@ -33365,6 +34055,7 @@ var app = (function () {
      * Do event listeners suport the `passive` option?
      */
     const supportsPassiveEventListener = supportsPassive$1;
+    //# sourceMappingURL=utils.js.map
 
     /**
     @license
@@ -33397,6 +34088,7 @@ var app = (function () {
             this.createFoundation();
         }
     }
+    //# sourceMappingURL=base-element.js.map
 
     const passiveEventOptionsIfSupported = supportsPassiveEventListener ? { passive: true } : undefined;
     class TopAppBarBaseBase extends BaseElement {
@@ -33490,6 +34182,7 @@ var app = (function () {
     __decorate([
         property()
     ], TopAppBarBaseBase.prototype, "scrollTarget", null);
+    //# sourceMappingURL=mwc-top-app-bar-base-base.js.map
 
     class TopAppBarBase extends TopAppBarBaseBase {
         constructor() {
@@ -33531,6 +34224,7 @@ var app = (function () {
     __decorate([
         property({ type: Boolean, reflect: true })
     ], TopAppBarBase.prototype, "dense", void 0);
+    //# sourceMappingURL=mwc-top-app-bar-base.js.map
 
     /**
     @license
@@ -33549,6 +34243,7 @@ var app = (function () {
     limitations under the License.
     */
     const style$4 = css `.mdc-top-app-bar{background-color:#6200ee;background-color:var(--mdc-theme-primary, #6200ee);color:#fff;display:flex;position:fixed;flex-direction:column;justify-content:space-between;box-sizing:border-box;width:100%;z-index:4}.mdc-top-app-bar .mdc-top-app-bar__action-item,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon{color:#fff;color:var(--mdc-theme-on-primary, #fff)}.mdc-top-app-bar .mdc-top-app-bar__action-item::before,.mdc-top-app-bar .mdc-top-app-bar__action-item::after,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon::before,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon::after{background-color:#fff}@supports not (-ms-ime-align: auto){.mdc-top-app-bar .mdc-top-app-bar__action-item::before,.mdc-top-app-bar .mdc-top-app-bar__action-item::after,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon::before,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon::after{background-color:var(--mdc-theme-on-primary, #fff)}}.mdc-top-app-bar .mdc-top-app-bar__action-item:hover::before,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon:hover::before{opacity:.08}.mdc-top-app-bar .mdc-top-app-bar__action-item.mdc-ripple-upgraded--background-focused::before,.mdc-top-app-bar .mdc-top-app-bar__action-item:not(.mdc-ripple-upgraded):focus::before,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon.mdc-ripple-upgraded--background-focused::before,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon:not(.mdc-ripple-upgraded):focus::before{transition-duration:75ms;opacity:.24}.mdc-top-app-bar .mdc-top-app-bar__action-item:not(.mdc-ripple-upgraded)::after,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon:not(.mdc-ripple-upgraded)::after{transition:opacity 150ms linear}.mdc-top-app-bar .mdc-top-app-bar__action-item:not(.mdc-ripple-upgraded):active::after,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon:not(.mdc-ripple-upgraded):active::after{transition-duration:75ms;opacity:.24}.mdc-top-app-bar .mdc-top-app-bar__action-item.mdc-ripple-upgraded,.mdc-top-app-bar .mdc-top-app-bar__navigation-icon.mdc-ripple-upgraded{--mdc-ripple-fg-opacity: 0.24}.mdc-top-app-bar__row{display:flex;position:relative;box-sizing:border-box;width:100%;height:64px}.mdc-top-app-bar__section{display:inline-flex;flex:1 1 auto;align-items:center;min-width:0;padding:8px 12px;z-index:1}.mdc-top-app-bar__section--align-start{justify-content:flex-start;order:-1}.mdc-top-app-bar__section--align-end{justify-content:flex-end;order:1}.mdc-top-app-bar__title{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:1.25rem;line-height:2rem;font-weight:500;letter-spacing:.0125em;text-decoration:inherit;text-transform:inherit;padding-left:20px;padding-right:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;z-index:1}[dir=rtl] .mdc-top-app-bar__title,.mdc-top-app-bar__title[dir=rtl]{padding-left:0;padding-right:20px}.mdc-top-app-bar--short-collapsed{border-radius:0 0 24px 0}[dir=rtl] .mdc-top-app-bar--short-collapsed,.mdc-top-app-bar--short-collapsed[dir=rtl]{border-radius:0 0 0 24px}.mdc-top-app-bar--short{top:0;right:auto;left:0;width:100%;transition:width 250ms cubic-bezier(0.4, 0, 0.2, 1)}[dir=rtl] .mdc-top-app-bar--short,.mdc-top-app-bar--short[dir=rtl]{right:0;left:auto}.mdc-top-app-bar--short .mdc-top-app-bar__row{height:56px}.mdc-top-app-bar--short .mdc-top-app-bar__section{padding:4px}.mdc-top-app-bar--short .mdc-top-app-bar__title{transition:opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);opacity:1}.mdc-top-app-bar--short-collapsed{box-shadow:0px 2px 4px -1px rgba(0, 0, 0, 0.2),0px 4px 5px 0px rgba(0, 0, 0, 0.14),0px 1px 10px 0px rgba(0,0,0,.12);width:56px;transition:width 300ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-top-app-bar--short-collapsed .mdc-top-app-bar__title{display:none}.mdc-top-app-bar--short-collapsed .mdc-top-app-bar__action-item{transition:padding 150ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-top-app-bar--short-collapsed.mdc-top-app-bar--short-has-action-item{width:112px}.mdc-top-app-bar--short-collapsed.mdc-top-app-bar--short-has-action-item .mdc-top-app-bar__section--align-end{padding-left:0;padding-right:12px}[dir=rtl] .mdc-top-app-bar--short-collapsed.mdc-top-app-bar--short-has-action-item .mdc-top-app-bar__section--align-end,.mdc-top-app-bar--short-collapsed.mdc-top-app-bar--short-has-action-item .mdc-top-app-bar__section--align-end[dir=rtl]{padding-left:12px;padding-right:0}.mdc-top-app-bar--dense .mdc-top-app-bar__row{height:48px}.mdc-top-app-bar--dense .mdc-top-app-bar__section{padding:0 4px}.mdc-top-app-bar--dense .mdc-top-app-bar__title{padding-left:12px;padding-right:0}[dir=rtl] .mdc-top-app-bar--dense .mdc-top-app-bar__title,.mdc-top-app-bar--dense .mdc-top-app-bar__title[dir=rtl]{padding-left:0;padding-right:12px}.mdc-top-app-bar--prominent .mdc-top-app-bar__row{height:128px}.mdc-top-app-bar--prominent .mdc-top-app-bar__title{align-self:flex-end;padding-bottom:2px}.mdc-top-app-bar--prominent .mdc-top-app-bar__action-item,.mdc-top-app-bar--prominent .mdc-top-app-bar__navigation-icon{align-self:flex-start}.mdc-top-app-bar--fixed{transition:box-shadow 200ms linear}.mdc-top-app-bar--fixed-scrolled{box-shadow:0px 2px 4px -1px rgba(0, 0, 0, 0.2),0px 4px 5px 0px rgba(0, 0, 0, 0.14),0px 1px 10px 0px rgba(0,0,0,.12);transition:box-shadow 200ms linear}.mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__row{height:96px}.mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__section{padding:0 12px}.mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__title{padding-left:20px;padding-right:0;padding-bottom:9px}[dir=rtl] .mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__title,.mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__title[dir=rtl]{padding-left:0;padding-right:20px}.mdc-top-app-bar--fixed-adjust{padding-top:64px}.mdc-top-app-bar--dense-fixed-adjust{padding-top:48px}.mdc-top-app-bar--short-fixed-adjust{padding-top:56px}.mdc-top-app-bar--prominent-fixed-adjust{padding-top:128px}.mdc-top-app-bar--dense-prominent-fixed-adjust{padding-top:96px}@media(max-width: 599px){.mdc-top-app-bar__row{height:56px}.mdc-top-app-bar__section{padding:4px}.mdc-top-app-bar--short{transition:width 200ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-top-app-bar--short-collapsed{transition:width 250ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-top-app-bar--short-collapsed .mdc-top-app-bar__section--align-end{padding-left:0;padding-right:12px}[dir=rtl] .mdc-top-app-bar--short-collapsed .mdc-top-app-bar__section--align-end,.mdc-top-app-bar--short-collapsed .mdc-top-app-bar__section--align-end[dir=rtl]{padding-left:12px;padding-right:0}.mdc-top-app-bar--prominent .mdc-top-app-bar__title{padding-bottom:6px}.mdc-top-app-bar--fixed-adjust{padding-top:56px}}:host{display:block}.mdc-top-app-bar{color:#fff;color:var(--mdc-theme-on-primary, #fff)}.mdc-top-app-bar--prominent #navigation ::slotted(*),.mdc-top-app-bar--prominent #actions ::slotted(*){align-self:flex-start}#navigation ::slotted(*),#actions ::slotted(*){--mdc-icon-button-ripple-opacity: 0.24}.mdc-top-app-bar--short-collapsed #actions ::slotted(*){transition:padding 150ms cubic-bezier(0.4, 0, 0.2, 1)}.mdc-top-app-bar__section--align-center{justify-content:center}.mdc-top-app-bar__section--align-center .mdc-top-app-bar__title{padding-left:0;padding-right:0}.center-title .mdc-top-app-bar__section--align-start,.center-title .mdc-top-app-bar__section--align-end{flex-basis:0}.mdc-top-app-bar--dense.mdc-top-app-bar--prominent .mdc-top-app-bar__section--align-center .mdc-top-app-bar__title{padding-left:0;padding-right:0}`;
+    //# sourceMappingURL=mwc-top-app-bar-css.js.map
 
     let TopAppBar = class TopAppBar extends TopAppBarBase {
     };
@@ -33556,9 +34251,10 @@ var app = (function () {
     TopAppBar = __decorate([
         customElement('mwc-top-app-bar')
     ], TopAppBar);
+    //# sourceMappingURL=mwc-top-app-bar.js.map
 
-    /* src/App.svelte generated by Svelte v3.17.0 */
-    const file = "src/App.svelte";
+    /* src/App.svelte generated by Svelte v3.17.1 */
+    const file$3 = "src/App.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -33566,8 +34262,8 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (29:2) {#each books as book}
-    function create_each_block(ctx) {
+    // (33:6) <Col lg='4' md='6' sm='12'>
+    function create_default_slot_2(ctx) {
     	let paper_card;
     	let img;
     	let img_src_value;
@@ -33582,6 +34278,7 @@ var app = (function () {
     	let t4_value = /*book*/ ctx[2].price + "";
     	let t4;
     	let paper_card_heading_value;
+    	let t5;
 
     	const block = {
     		c: function create() {
@@ -33593,15 +34290,16 @@ var app = (function () {
     			t2 = text(t2_value);
     			t3 = text(" au prix de ");
     			t4 = text(t4_value);
+    			t5 = space();
     			if (img.src !== (img_src_value = "data:image/jpeg;base64, " + /*book*/ ctx[2].img.data)) attr_dev(img, "src", img_src_value);
     			attr_dev(img, "alt", img_alt_value = /*book*/ ctx[2].title);
     			attr_dev(img, "title", img_title_value = /*book*/ ctx[2].title);
-    			add_location(img, file, 30, 4, 956);
+    			add_location(img, file$3, 34, 10, 1081);
     			attr_dev(div, "class", "card-content");
-    			add_location(div, file, 31, 6, 1055);
+    			add_location(div, file$3, 35, 10, 1184);
     			set_custom_element_data(paper_card, "heading", paper_card_heading_value = /*book*/ ctx[2].title);
     			set_custom_element_data(paper_card, "class", "svelte-5lzakp");
-    			add_location(paper_card, file, 29, 4, 918);
+    			add_location(paper_card, file$3, 33, 8, 1037);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, paper_card, anchor);
@@ -33612,6 +34310,7 @@ var app = (function () {
     			append_dev(div, t2);
     			append_dev(div, t3);
     			append_dev(div, t4);
+    			insert_dev(target, t5, anchor);
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*books*/ 1 && img.src !== (img_src_value = "data:image/jpeg;base64, " + /*book*/ ctx[2].img.data)) {
@@ -33635,6 +34334,64 @@ var app = (function () {
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(paper_card);
+    			if (detaching) detach_dev(t5);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_2.name,
+    		type: "slot",
+    		source: "(33:6) <Col lg='4' md='6' sm='12'>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (32:4) {#each books as book}
+    function create_each_block(ctx) {
+    	let current;
+
+    	const col = new Col({
+    			props: {
+    				lg: "4",
+    				md: "6",
+    				sm: "12",
+    				$$slots: { default: [create_default_slot_2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(col.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(col, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const col_changes = {};
+
+    			if (dirty & /*$$scope, books*/ 33) {
+    				col_changes.$$scope = { dirty, ctx };
+    			}
+
+    			col.$set(col_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(col.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(col.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(col, detaching);
     		}
     	};
 
@@ -33642,14 +34399,162 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(29:2) {#each books as book}",
+    		source: "(32:4) {#each books as book}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$1(ctx) {
+    // (31:4) <Row>
+    function create_default_slot_1(ctx) {
+    	let each_1_anchor;
+    	let current;
+    	let each_value = /*books*/ ctx[0];
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+    		each_blocks[i] = null;
+    	});
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*books*/ 1) {
+    				each_value = /*books*/ ctx[0];
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    						transition_in(each_blocks[i], 1);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						transition_in(each_blocks[i], 1);
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				group_outros();
+
+    				for (i = each_value.length; i < each_blocks.length; i += 1) {
+    					out(i);
+    				}
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+
+    			for (let i = 0; i < each_value.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			each_blocks = each_blocks.filter(Boolean);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1.name,
+    		type: "slot",
+    		source: "(31:4) <Row>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (30:2) <Container>
+    function create_default_slot(ctx) {
+    	let current;
+
+    	const row = new Row({
+    			props: {
+    				$$slots: { default: [create_default_slot_1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(row.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(row, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const row_changes = {};
+
+    			if (dirty & /*$$scope, books*/ 33) {
+    				row_changes.$$scope = { dirty, ctx };
+    			}
+
+    			row.$set(row_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(row.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(row.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(row, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot.name,
+    		type: "slot",
+    		source: "(30:2) <Container>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$4(ctx) {
     	let link;
     	let t0;
     	let main;
@@ -33668,10 +34573,6 @@ var app = (function () {
     	let t7;
     	let div1;
     	let t8;
-    	let t9;
-    	let mwc_button0;
-    	let t10;
-    	let mwc_button1;
     	let current;
 
     	function db_documents_binding(value) {
@@ -33689,12 +34590,14 @@ var app = (function () {
 
     	const db = new DB({ props: db_props, $$inline: true });
     	binding_callbacks.push(() => bind(db, "documents", db_documents_binding));
-    	let each_value = /*books*/ ctx[0];
-    	let each_blocks = [];
 
-    	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
-    	}
+    	const container = new Container({
+    			props: {
+    				$$slots: { default: [create_default_slot] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
 
     	const block = {
     		c: function create() {
@@ -33717,41 +34620,27 @@ var app = (function () {
     			t7 = space();
     			div1 = element("div");
     			t8 = space();
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].c();
-    			}
-
-    			t9 = space();
-    			mwc_button0 = element("mwc-button");
-    			t10 = space();
-    			mwc_button1 = element("mwc-button");
+    			create_component(container.$$.fragment);
     			attr_dev(link, "href", "https://fonts.googleapis.com/icon?family=Material+Icons");
     			attr_dev(link, "rel", "stylesheet");
-    			add_location(link, file, 16, 0, 309);
+    			add_location(link, file$3, 17, 0, 362);
     			set_custom_element_data(mwc_icon_button0, "icon", "menu");
     			set_custom_element_data(mwc_icon_button0, "slot", "navigationIcon");
-    			add_location(mwc_icon_button0, file, 21, 4, 508);
+    			add_location(mwc_icon_button0, file$3, 22, 4, 561);
     			attr_dev(div0, "slot", "title");
-    			add_location(div0, file, 22, 4, 582);
+    			add_location(div0, file$3, 23, 4, 635);
     			set_custom_element_data(mwc_icon_button1, "icon", "file_download");
     			set_custom_element_data(mwc_icon_button1, "slot", "actionItems");
-    			add_location(mwc_icon_button1, file, 23, 4, 616);
+    			add_location(mwc_icon_button1, file$3, 24, 4, 669);
     			set_custom_element_data(mwc_icon_button2, "icon", "print");
     			set_custom_element_data(mwc_icon_button2, "slot", "actionItems");
-    			add_location(mwc_icon_button2, file, 24, 4, 696);
+    			add_location(mwc_icon_button2, file$3, 25, 4, 749);
     			set_custom_element_data(mwc_icon_button3, "icon", "favorite");
     			set_custom_element_data(mwc_icon_button3, "slot", "actionItems");
-    			add_location(mwc_icon_button3, file, 25, 4, 768);
-    			add_location(div1, file, 26, 4, 843);
-    			add_location(mwc_top_app_bar, file, 20, 3, 486);
-    			set_custom_element_data(mwc_button0, "raised", "");
-    			set_custom_element_data(mwc_button0, "label", "raised");
-    			set_custom_element_data(mwc_button0, "icon", "code");
-    			add_location(mwc_button0, file, 36, 2, 1181);
-    			set_custom_element_data(mwc_button1, "label", "Click me!");
-    			add_location(mwc_button1, file, 37, 2, 1243);
-    			add_location(main, file, 18, 0, 402);
+    			add_location(mwc_icon_button3, file$3, 26, 4, 821);
+    			add_location(div1, file$3, 27, 4, 896);
+    			add_location(mwc_top_app_bar, file$3, 21, 3, 539);
+    			add_location(main, file$3, 19, 0, 455);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -33775,15 +34664,7 @@ var app = (function () {
     			append_dev(mwc_top_app_bar, t7);
     			append_dev(mwc_top_app_bar, div1);
     			append_dev(main, t8);
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].m(main, null);
-    			}
-
-    			append_dev(main, t9);
-    			append_dev(main, mwc_button0);
-    			append_dev(main, t10);
-    			append_dev(main, mwc_button1);
+    			mount_component(container, main, null);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
@@ -33796,37 +34677,23 @@ var app = (function () {
     			}
 
     			db.$set(db_changes);
+    			const container_changes = {};
 
-    			if (dirty & /*books*/ 1) {
-    				each_value = /*books*/ ctx[0];
-    				let i;
-
-    				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context(ctx, each_value, i);
-
-    					if (each_blocks[i]) {
-    						each_blocks[i].p(child_ctx, dirty);
-    					} else {
-    						each_blocks[i] = create_each_block(child_ctx);
-    						each_blocks[i].c();
-    						each_blocks[i].m(main, t9);
-    					}
-    				}
-
-    				for (; i < each_blocks.length; i += 1) {
-    					each_blocks[i].d(1);
-    				}
-
-    				each_blocks.length = each_value.length;
+    			if (dirty & /*$$scope, books*/ 33) {
+    				container_changes.$$scope = { dirty, ctx };
     			}
+
+    			container.$set(container_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
     			transition_in(db.$$.fragment, local);
+    			transition_in(container.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(db.$$.fragment, local);
+    			transition_out(container.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
@@ -33834,13 +34701,13 @@ var app = (function () {
     			if (detaching) detach_dev(t0);
     			if (detaching) detach_dev(main);
     			destroy_component(db);
-    			destroy_each(each_blocks, detaching);
+    			destroy_component(container);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$1.name,
+    		id: create_fragment$4.name,
     		type: "component",
     		source: "",
     		ctx
@@ -33849,7 +34716,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$1($$self, $$props, $$invalidate) {
+    function instance$4($$self, $$props, $$invalidate) {
     	let books = [];
 
     	function db_documents_binding(value) {
@@ -33871,13 +34738,13 @@ var app = (function () {
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {});
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "App",
     			options,
-    			id: create_fragment$1.name
+    			id: create_fragment$4.name
     		});
     	}
     }

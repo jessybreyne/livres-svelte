@@ -2,6 +2,7 @@
   import DB from "./DB.svelte";
   import "@polymer/paper-card";
   import "@material/mwc-button";
+  import { Col, Container, Row } from "sveltestrap";
   import "@material/mwc-icon-button";
   import "@material/mwc-top-app-bar";
   let books = [];
@@ -25,15 +26,19 @@
     <mwc-icon-button icon="print" slot="actionItems"></mwc-icon-button>
     <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
     <div><!-- content --></div>
-</mwc-top-app-bar>
-  {#each books as book}
-    <paper-card heading={book.title}>
-    <img src="data:image/jpeg;base64, {book.img.data}" alt="{book.title}" title="{book.title}"/>
-      <div class="card-content">
-        Ecrit par {book.author} au prix de {book.price}
-      </div>
-    </paper-card>
-  {/each}
-  <mwc-button raised label="raised" icon="code"></mwc-button>
-  <mwc-button label="Click me!" />
+  </mwc-top-app-bar>
+  <Container>
+    <Row>
+    {#each books as book}
+      <Col lg='4' md='6' sm='12'>
+        <paper-card heading={book.title}>
+          <img src="data:image/jpeg;base64, {book.img.data}" alt="{book.title}" title="{book.title}"/>
+          <div class="card-content">
+            Ecrit par {book.author} au prix de {book.price}
+          </div>
+        </paper-card>
+      </Col>
+    {/each}
+    </Row>
+  </Container>
 </main>
