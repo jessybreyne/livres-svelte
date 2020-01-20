@@ -1,7 +1,7 @@
 <script>
-  import DB from "./DB.svelte";
-  import Pagination from "./Pagination.svelte"
-  import Book from "./Book.svelte"
+  import DB from "../components/DB.svelte";
+  import Pagination from "../components/Pagination.svelte"
+  import Book from "../components/Book.svelte"
   import "@polymer/paper-card";
   import "@material/mwc-button";
   import { Col, Container, Row } from "sveltestrap";
