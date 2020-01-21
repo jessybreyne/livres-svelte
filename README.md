@@ -1,6 +1,13 @@
 # Projet universitaire
 
-Réalisation d'une application de gestion de livre en Svlete.
+Réalisation d'une application de gestion de livre en Svelte.
+
+# Fonctionnalités
+
+* Faire des add, update, delete (CRUD)
+* Pagination
+* Multi colones et responsive avec beau design
+* Bien utiliser les composants
 
 # Installation
 
