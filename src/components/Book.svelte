@@ -18,6 +18,8 @@
         <img src="data:image/jpeg;base64, {book.img.data}" alt="{book.title}" title="{book.title}"/>
         <div class="card-content">
             Ecrit par {book.author} au prix de {book.price}
+            <br>
+            <a class="text-danger" href="#">Supprimer</a>
         </div>
     </paper-card>
 </Col>
