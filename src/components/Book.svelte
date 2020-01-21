@@ -9,6 +9,7 @@
     width: 100%;
     margin-top: 3px;
     margin-bottom: 3px;
+    text-align:center;
   }
 </style>
 
