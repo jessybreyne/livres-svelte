@@ -13,8 +13,8 @@
   }
 </style>
 
-<Col lg='4' md='6' sm='12'>
-    <paper-card heading={book.title}>
+<Col lg='4' md='6' sm='12' class="mt-4">
+    <paper-card heading={book.title} class="h-100">
         <img src="data:image/jpeg;base64, {book.img.data}" alt="{book.title}" title="{book.title}"/>
         <div class="card-content">
             Ecrit par {book.author} au prix de {book.price}
