@@ -1,10 +1,17 @@
 <script>
   import { paginate, LightPaginationNav } from 'svelte-paginate'
   export let items;
+  import Book from "../components/Book.svelte"
+   import { Row } from "sveltestrap";
   let currentPage = 1;
   let pageSize = 9;
   $: paginatedItems = paginate({ items, pageSize, currentPage })
 </script>
+  <Row>
+    {#each paginatedItems as book}
+        <Book class="item" bind:book={book}/>
+    {/each}
+  </Row>
 
     <LightPaginationNav 
     totalItems="{items.length}" 

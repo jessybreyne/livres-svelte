@@ -1,7 +1,6 @@
 <script>
   import DB from "../components/DB.svelte";
-  import Pagination from "../components/Pagination.svelte"
-  import Book from "../components/Book.svelte"
+  import Pagination from "./Pagination.svelte"
   import "@polymer/paper-card";
   import "@material/mwc-button";
   import { Col, Container, Row } from "sveltestrap";
@@ -24,11 +23,6 @@
     <div><!-- content --></div>
   </mwc-top-app-bar>
   <Container>
-      <Row>
-      {#each books as book}
-        <Book bind:book={book}/>
-      {/each}
-    </Row>
     <Pagination bind:items={books}/>
   </Container>
 </main>
