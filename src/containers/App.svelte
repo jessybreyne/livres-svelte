@@ -18,9 +18,14 @@
    <mwc-top-app-bar>
     <mwc-icon-button icon="menu" slot="navigationIcon"></mwc-icon-button>
     <div slot="title">Books Storage</div>
-    <Search bind:items={books}/>
+    <div class="collapse" id="collapseSearch">
+      <div class="card card-body">
+        <Search bind:items={books}/>
+      </div>
+    </div>
+    
 
-    <mwc-icon-button icon="file_download" slot="actionItems"></mwc-icon-button>
+    <mwc-icon-button data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch" icon="search" slot="actionItems"></mwc-icon-button>
     <mwc-icon-button icon="print" slot="actionItems"></mwc-icon-button>
     <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
     <div><!-- content --></div>
