@@ -14566,7 +14566,7 @@ var app = (function () {
     }
 
     // (10:2) <Row>
-    function create_default_slot$1(ctx) {
+    function create_default_slot_1(ctx) {
     	let each_1_anchor;
     	let current;
     	let each_value = /*paginatedItems*/ ctx[2];
@@ -14650,7 +14650,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$1.name,
+    		id: create_default_slot_1.name,
     		type: "slot",
     		source: "(10:2) <Row>",
     		ctx
@@ -14659,17 +14659,9 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$7(ctx) {
-    	let t;
+    // (15:2) <Row>
+    function create_default_slot$1(ctx) {
     	let current;
-
-    	const row = new Row({
-    			props: {
-    				$$slots: { default: [create_default_slot$1] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
 
     	const lightpaginationnav = new LightPaginationNav({
     			props: {
@@ -14686,27 +14678,13 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			create_component(row.$$.fragment);
-    			t = space();
     			create_component(lightpaginationnav.$$.fragment);
     		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
     		m: function mount(target, anchor) {
-    			mount_component(row, target, anchor);
-    			insert_dev(target, t, anchor);
     			mount_component(lightpaginationnav, target, anchor);
     			current = true;
     		},
-    		p: function update(ctx, [dirty]) {
-    			const row_changes = {};
-
-    			if (dirty & /*$$scope, paginatedItems*/ 516) {
-    				row_changes.$$scope = { dirty, ctx };
-    			}
-
-    			row.$set(row_changes);
+    		p: function update(ctx, dirty) {
     			const lightpaginationnav_changes = {};
     			if (dirty & /*items*/ 1) lightpaginationnav_changes.totalItems = /*items*/ ctx[0].length;
     			if (dirty & /*currentPage*/ 2) lightpaginationnav_changes.currentPage = /*currentPage*/ ctx[1];
@@ -14714,19 +14692,95 @@ var app = (function () {
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(row.$$.fragment, local);
     			transition_in(lightpaginationnav.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(row.$$.fragment, local);
     			transition_out(lightpaginationnav.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			destroy_component(row, detaching);
-    			if (detaching) detach_dev(t);
     			destroy_component(lightpaginationnav, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$1.name,
+    		type: "slot",
+    		source: "(15:2) <Row>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$7(ctx) {
+    	let t;
+    	let current;
+
+    	const row0 = new Row({
+    			props: {
+    				$$slots: { default: [create_default_slot_1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const row1 = new Row({
+    			props: {
+    				$$slots: { default: [create_default_slot$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(row0.$$.fragment);
+    			t = space();
+    			create_component(row1.$$.fragment);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(row0, target, anchor);
+    			insert_dev(target, t, anchor);
+    			mount_component(row1, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const row0_changes = {};
+
+    			if (dirty & /*$$scope, paginatedItems*/ 516) {
+    				row0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			row0.$set(row0_changes);
+    			const row1_changes = {};
+
+    			if (dirty & /*$$scope, items, currentPage*/ 515) {
+    				row1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			row1.$set(row1_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(row0.$$.fragment, local);
+    			transition_in(row1.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(row0.$$.fragment, local);
+    			transition_out(row1.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(row0, detaching);
+    			if (detaching) detach_dev(t);
+    			destroy_component(row1, detaching);
     		}
     	};
 
