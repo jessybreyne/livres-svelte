@@ -20,6 +20,7 @@
             Ecrit par {book.author} au prix de {book.price}
             <br>
             <a class="text-danger" href="#">Supprimer</a>
+            <a href='{book.url}' class="btn btn-success">Acheter</a>
         </div>
     </paper-card>
 </Col>
