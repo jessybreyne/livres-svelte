@@ -3,19 +3,21 @@
   import Pagination from "./Pagination.svelte";
   import Search from "./Search.svelte";
   import "@polymer/paper-card";
+  import PouchDB from 'pouchdb-browser';
   import "@material/mwc-button";
   import { Col, Container, Row } from "sveltestrap";
   import FormAdd from "../components/FormAdd.svelte"
   import "@material/mwc-icon-button";
   import "@material/mwc-top-app-bar";
   let books = [];
+  let database= "books";
 </script>
 
 
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet">
 <main>
-   <DB bind:documents={books} initsrc="./books.json" collection="books"/>
+   <DB bind:documents={books} initsrc="./books.json" collection={database}/>
    <mwc-top-app-bar>
     <div slot="title">Books Storage</div>
     <div class="collapse" id="collapseSearch">
@@ -25,7 +27,7 @@
     </div>
     <div class="collapse" id="collapseAdd">
       <div class="card card-body">
-        <FormAdd/>
+        <FormAdd bind:collection={database} books={books}/>
       </div>
     </div>
     
