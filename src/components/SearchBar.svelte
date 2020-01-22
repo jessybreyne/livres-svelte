@@ -1,11 +1,16 @@
 <script>
-    import { FormGroup, Input } from "sveltestrap";
+    import { FormGroup, Input, Row } from "sveltestrap";
+    import Book from "../components/Book.svelte"
+
     export let items;
-    export let result = [];
 
+    let result;
+    let query;
 
-    async function search(event) {
-        let query = document.getElementById('search').value;
+    $: search(query);
+
+    async function search(query) {
+        result = [];
         
         for(let book of items){
             
@@ -18,10 +23,16 @@
 </script>
 
 <FormGroup>
-    <Input on:keyup={search}
-        
+    <Input 
+        bind:value={query}
         type="search"
         name="search"
         id="search"
         placeholder="Rechercher" />
   </FormGroup>
+
+  <Row>
+    {#each result as book}
+        <Book class="item" bind:book={book}/>
+    {/each}
+  </Row>
