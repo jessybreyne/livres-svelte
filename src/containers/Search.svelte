@@ -9,3 +9,4 @@
 <Container>
       <SearchBar bind:items={items}/>
 </Container>
+
