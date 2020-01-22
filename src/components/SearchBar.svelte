@@ -1,24 +1,27 @@
 <script>
     import { FormGroup, Input } from "sveltestrap";
     export let items;
-    let query;
+    export let result = [];
 
- async function search(query, items) {
-    let result = [];
-    for(let book in items){
-        if(book.title.search(query) || book.author.search(query)){
-            result.append(book);
+
+    async function search(event) {
+        let query = document.getElementById('search').value;
+        
+        for(let book of items){
+            
+            if(book.title.indexOf(query) >= 0 || book.author.indexOf(query) >= 0){
+                result.push(book);
+            }
         }
+        console.log(result.length);
     }
-    console.log(result);
- }
 </script>
 
 <FormGroup>
-    <Input
-        bind:value={query}
+    <Input on:keyup={search}
+        
         type="search"
         name="search"
-        id="exampleSearch"
-        placeholder="search placeholder" />
+        id="search"
+        placeholder="Rechercher" />
   </FormGroup>
