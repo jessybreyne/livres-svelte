@@ -12,7 +12,7 @@
         <Book class="item" bind:book={book}/>
     {/each}
   </Row>
-  <Row class="justify-content-md-center mt-5">
+  <Row class="justify-content-md-center mt-5 mb-5">
     <LightPaginationNav 
     totalItems="{items.length}" 
     pageSize="{pageSize}" 
