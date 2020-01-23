@@ -38,6 +38,6 @@
     <div><!-- content --></div>
   </mwc-top-app-bar>
   <Container>
-    <Pagination bind:items={books}/>
+    <Pagination bind:items={books} collection={database}/>
   </Container>
 </main>

@@ -1,6 +1,6 @@
 <script>
     import { FormGroup, Input, Row } from "sveltestrap";
-    import Book from "../components/Book.svelte"
+    import BookItem from "../components/BookItem.svelte"
 
     export let items;
 
@@ -33,6 +33,6 @@
 
   <Row>
     {#each result as book}
-        <Book class="item" bind:book={book}/>
+        <BookItem class="item" bind:book={book}/>
     {/each}
   </Row>

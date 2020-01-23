@@ -6,22 +6,21 @@
   export let collection;
   export let books;
 
-  let db= new PouchDB(collection)
-
   let src;
   let url;
  
-  let titlePut = "";
-  let authorPut = "";
+  let titlePut;
+  let authorPut;
   let image;
-  let pricePut = 0;
-  let urlBuy = '';
+  let pricePut;
+  let urlBuy;
 
 function loadFile(e) {
     src = URL.createObjectURL(e.target.files[0]);
 }
 
 async function addBook(){
+        let db= new PouchDB(collection)
         let image = url.split(':');
         image = image[1].split(';');
         image[1] = image[1].split(',')[1];
