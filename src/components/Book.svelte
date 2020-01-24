@@ -12,7 +12,7 @@
   async function removeBook(id){
     let nb = (current-1)*pageSize+indice
     db.get(id).then(function(doc){ db.remove(doc);});
-    array.splice(nb,1)
+    array = array.slice(0,nb).concat(array.slice(nb +1))
   }
 
   onMount(
@@ -44,7 +44,7 @@
         <div class="card-content">
             Ecrit par {book.author} au prix de {book.price}
             <br>
-            <a class="text-danger" href="#" on:click={removeBook(book._id)}>Supprimer</a>
+            <button class="text-danger" on:click={removeBook(book._id)}>Supprimer</button>
             <a href='{book.url}' class="btn btn-success">Acheter</a>
         </div>
     </paper-card>
