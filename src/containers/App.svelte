@@ -27,7 +27,7 @@
     </div>
     <div class="collapse" id="collapseAdd">
       <div class="card card-body">
-        <FormAdd bind:collection={database} books={books}/>
+        <FormAdd bind:collection={database} bind:books={books}/>
       </div>
     </div>
     
