@@ -9,11 +9,11 @@
   let src;
   let url;
  
-  let titlePut;
-  let authorPut;
-  let image;
-  let pricePut;
-  let urlBuy;
+  let titlePut='';
+  let authorPut='';
+  let image='';
+  let pricePut='';
+  let urlBuy='';
 
 function loadFile(e) {
     src = URL.createObjectURL(e.target.files[0]);
