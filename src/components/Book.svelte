@@ -1,5 +1,4 @@
 <script>
-  import { paginate, LightPaginationNav } from 'svelte-paginate'
   import { onMount,onDestroy } from 'svelte';
   import { Col, Container, Row } from "sveltestrap";
   import PouchDB from "pouchdb-browser";
@@ -7,16 +6,13 @@
   export let array;
   export let current;
   export let indice;
-  export let pageSize
+  export let pageSize;
   let db;
 
   async function removeBook(id){
     let nb = (current-1)*pageSize+indice
     db.get(id).then(function(doc){ db.remove(doc);});
-    console.log(array[nb])
-    console.log(array)
     array.splice(nb,1)
-    console.log(array)
   }
 
   onMount(
