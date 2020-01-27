@@ -7,6 +7,8 @@
   export let current;
   export let indice;
   export let pageSize;
+  export let bookEdit;
+  export let open;
   let db;
 
   async function removeBook(id){
@@ -26,6 +28,11 @@
      console.log("Objet removed")
    }
  );
+ 
+ function editBook(book){
+   bookEdit = book;
+   open = true;
+ }
 </script>
 
 
@@ -46,6 +53,7 @@
             <br>
             <button class="text-danger" on:click={removeBook(book._id)}>Supprimer</button>
             <a href='{book.url}' class="btn btn-success">Acheter</a>
+            <button on:click={editBook(book)}>Editer</button>
         </div>
     </paper-card>
 </Col>

@@ -4,52 +4,53 @@
   import PouchDB from 'pouchdb-browser'
   import "@material/mwc-icon-button";
   export let collection;
-  export let books;
   export let book;
+  export let books;
   export let open;
   export let toggle;
   let src;
   let url;
-
+  
+  let urlBuy;
+  let pricePut;
   let titlePut;
   let authorPut;
   let image;
-  let pricePut;
-  let urlBuy;
   let visible=false;
 
 function loadFile(e) {
     src = URL.createObjectURL(e.target.files[0]);
 }
-async function addBook(){
-    if (url && titlePut && authorPut && pricePut && urlBuy){
+
+
+async function updateBook(book){
+    if (book.title && book.author && book.price && book.url){
         let db= new PouchDB(collection)
-        image = url.split(':');
-        image = image[1].split(';');
-        image[1] = image[1].split(',')[1];
-        await db.post({
-            author: authorPut,
-            url: urlBuy,
-            _id: titlePut,
-            price: pricePut,
-            title: titlePut,
-            img:{
+        if(url){
+            image = url.split(':');
+            image = image[1].split(';');
+            image[1] = image[1].split(',')[1];
+            image = {
                 content_type: image[0],
                 filename: image[1].substring(2,10)+".jpg",
                 data: image[1],
                 path: "images/"+ image[1].substring(2,10) +".jpg"  
-            }     
+            } 
+        }else{
+            image = book.img
+        }
+        await db.put({
+            author: book.author,
+            url: book.url,
+            _rev: book._rev,
+            _id: book.title,
+            price: book.price,
+            title: book.title,
+            img: image    
         });
+        open=false;
         const zdocs = await db.allDocs({include_docs: true});
         books = zdocs.rows.map(d => d.doc)
-        titlePut= '';
-        urlBuy = '';
-        authorPut = '';
-        image = '';
-        url = '';
-        src = '';
-        pricePut = '';
-        open=false;
     }
     else{
         visible=true;
@@ -58,7 +59,7 @@ async function addBook(){
 
 </script>
 <Modal isOpen={open} {toggle}>
-    <ModalHeader {toggle}>Ajout d'un livre</ModalHeader>
+    <ModalHeader {toggle}>Edit d'un livre</ModalHeader>
     <ModalBody>
         <Container>
         <Alert color="danger" isOpen={visible} toggle={() => (visible = false)}>
@@ -67,22 +68,22 @@ async function addBook(){
         <form>
             <FormGroup>
                 <Label for="auteur">Auteur</Label>
-                <input id="auteur" type="text" class="form-control" bind:value={authorPut} aria-describedby="auteur du livre" required/>
+                <input id="auteur" type="text" class="form-control" bind:value={book.author} aria-describedby="auteur du livre" required/>
             </FormGroup>
             <FormGroup>
                 <Label for="titre">Titre</Label>
-                <input id="titre" type="text" class="form-control" bind:value={titlePut} aria-describedby="auteur du livre" required/>
+                <input id="titre" type="text" class="form-control" bind:value={book.title} aria-describedby="auteur du livre" required/>
             </FormGroup>
             <FormGroup>
                 <Label for="prix">Prix</Label>
                 <InputGroup>
-                    <input id="prix" class="form-control" bind:value={pricePut} aria-describedby="le prix du livre" required/>
+                    <input id="prix" class="form-control" bind:value={book.price} aria-describedby="le prix du livre" required/>
                     <span class="input-group-text" id="basic-addon2">€</span>
                 </InputGroup>
             </FormGroup>
             <FormGroup>
                 <Label for="url">Lien d'achat</Label>
-                <input id="url" type="text" class="form-control" bind:value={urlBuy} aria-describedby="url d'achat du livre"/>
+                <input id="url" type="text" class="form-control" bind:value={book.url} aria-describedby="url d'achat du livre"/>
             </FormGroup>
             <Row class='justify-content-md-center'>
                 <ImgEncoder {src} bind:url/>
@@ -95,6 +96,6 @@ async function addBook(){
      </ModalBody>
     <ModalFooter>
         <Button type="button" on:click={toggle}>Annuler</Button>
-        <button on:click|preventDefault={addBook} type='submit' class='btn btn-success'>Ajouter le livre</button>
+        <button on:click|preventDefault={updateBook(book)} type='submit' class='btn btn-success'>Editer le livre</button>
     </ModalFooter>
 </Modal>
