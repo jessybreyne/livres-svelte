@@ -14,7 +14,8 @@
     "rollup-plugin-svelte": "^5.0.3",
     "rollup-plugin-terser": "^5.1.2",
     "svelte": "^3.17.1",
-    "svelte-forms": "^1.2.0"
+    "svelte-forms": "^1.2.0",
+    "svelte-image-encoder": "^1.2.5"
   },
   "dependencies": {
     "@material/mwc-button": "^0.11.1",
