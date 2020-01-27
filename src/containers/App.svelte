@@ -25,15 +25,13 @@
         <Search bind:items={books}/>
       </div>
     </div>
-    <div class="collapse" id="collapseAdd">
-      <div class="card card-body">
+
         <FormAdd bind:collection={database} bind:books={books}/> <!-- Fermer collaspe lors de l'ajout -->
-      </div>
-    </div>
+
     
 
     <mwc-icon-button data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch" icon="search" slot="actionItems"></mwc-icon-button>
-    <mwc-icon-button icon="add" data-toggle="collapse" data-target="#collapseAdd" aria-expanded="false" aria-controls="collapseAdd" slot="actionItems"></mwc-icon-button>
+    <mwc-icon-button icon="add" data-toggle="modal" data-target="#exampleModal" slot="actionItems"></mwc-icon-button>
     <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
     <div><!-- content --></div>
   </mwc-top-app-bar>
