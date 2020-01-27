@@ -68,31 +68,36 @@ const myForm = form(() => ({
             <form>
                 <div class="modal-body">
                     <Container>
-                        <Row class='justify-content-md-center'>
-                            <label>Auteur :</label>
-                            <input type='text' bind:value={authorPut} class:valid={$myForm.author.valid}>
-                        </Row>
-                        <Row class='justify-content-md-center'>
-                            <label>Titre :</label>
-                            <input type='text' bind:value={titlePut} class:valid={$myForm.title.valid}>
-                        </Row>
-                        <Row class='justify-content-md-center'>
-                            <label>Prix :</label>
-                            <input type='text' bind:value={pricePut} class:valid={$myForm.price.valid}>
-                        </Row>
-                        <Row class='justify-content-md-center'>
-                            <label>Lien d'achat :</label>
-                            <input type='url' bind:value={urlBuy} class:valid={$myForm.price.valid}>
-                        </Row>
-                    </Container>
-                    <Container>
+                        <div class="form-group">
+                            <label for="auteur">Auteur</label>
+                            <input id="auteur" type="text" class="form-control" bind:value={authorPut} class:valid={$myForm.author.valid} aria-describedby="auteur du livre">
+                        </div>
+                        <div class="form-group">
+                            <label for="titre">Titre</label>
+                            <input id="titre" type="text" class="form-control" bind:value={titlePut} class:valid={$myForm.title.valid} aria-describedby="auteur du livre">
+                        </div>
+                        <div class="form-group">
+                            <label for="prix">Prix</label>
+                            <div class="input-group">
+                                <input id="prix" type="number" class="form-control" bind:value={pricePut} class:valid={$myForm.price.valid} aria-describedby="le prix du livre">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" id="basic-addon2">.00 €</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="url">Lien d'achat</label>
+                            <input id="url" type="text" class="form-control" bind:value={urlBuy} class:valid={$myForm.price.valid} aria-describedby="url d'achat du livre">
+                        </div>
                         <Row class='justify-content-md-center'>
                             <ImgEncoder {src} bind:url/>
                         </Row>
                         <Row class='justify-content-md-center'>
                             <input on:change={loadFile} type='file' class:valid={$myForm.image.valid} >
                         </Row>
+
                     </Container>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
