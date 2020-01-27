@@ -13,6 +13,12 @@
   let database= "books";
   let open = false;
   const toggle = () => (open = !open);
+
+   function print(){
+      window.print();
+      console.log("imprime");
+    }
+  
 </script>
 
 
@@ -27,9 +33,9 @@
           <Search bind:items={books}/>
         </div>
       </div>
-      <mwc-icon-button data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch" icon="search" slot="actionItems"></mwc-icon-button>
+      <mwc-icon-button icon="search" slot="actionItems" data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch"></mwc-icon-button>
       <mwc-icon-button icon="add" slot="actionItems" on:click={toggle}></mwc-icon-button>
-      <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
+      <mwc-icon-button icon="print" slot="actionItems" on:click={print}></mwc-icon-button>
   </mwc-top-app-bar>
   <Container>
     <Pagination bind:items={books} collection={database}/>
