@@ -51,9 +51,9 @@
         <div class="card-content">
             Ecrit par {book.author} au prix de {book.price}
             <br>
-            <button class="text-danger" on:click={removeBook(book._id)}>Supprimer</button>
+            <button class="btn btn-danger" on:click={removeBook(book._id)}>Supprimer</button>
             <a href='{book.url}' class="btn btn-success">Acheter</a>
-            <button on:click={editBook(book)}>Editer</button>
+            <button class="btn btn-secondary" on:click={editBook(book)}>Editer</button>
         </div>
     </paper-card>
 </Col>
