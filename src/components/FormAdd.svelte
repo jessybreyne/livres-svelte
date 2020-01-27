@@ -10,6 +10,7 @@
   let src;
   let url;
  
+  let isEdit=false;
   let titlePut;
   let authorPut;
   let image;
@@ -20,7 +21,6 @@
 function loadFile(e) {
     src = URL.createObjectURL(e.target.files[0]);
 }
-
 async function addBook(){
     if (url && titlePut && authorPut && pricePut && urlBuy){
         let db= new PouchDB(collection)
