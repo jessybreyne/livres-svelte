@@ -11,6 +11,8 @@
   import "@material/mwc-top-app-bar";
   let books = [];
   let database= "books";
+  let open = false;
+  const toggle = () => (open = !open);
 </script>
 
 
@@ -20,17 +22,17 @@
    <DB bind:documents={books} initsrc="./books.json" collection={database}/>
    <mwc-top-app-bar>
     <div slot="title">Books Storage</div>
-    <div class="collapse" id="collapseSearch">
-      <div class="card card-body">
-        <Search bind:items={books}/>
+      <div class="collapse" id="collapseSearch">
+        <div class="card card-body">
+          <Search bind:items={books}/>
+        </div>
       </div>
-    </div>
-    <FormAdd bind:collection={database} bind:books={books}/>
-    <mwc-icon-button data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch" icon="search" slot="actionItems"></mwc-icon-button>
-    <mwc-icon-button icon="add" data-toggle="modal" data-target="#exampleModal" slot="actionItems"></mwc-icon-button>
-    <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
+      <mwc-icon-button data-toggle="collapse" data-target="#collapseSearch" aria-expanded="false" aria-controls="collapseSearch" icon="search" slot="actionItems"></mwc-icon-button>
+      <mwc-icon-button icon="add" slot="actionItems" on:click={toggle}></mwc-icon-button>
+      <mwc-icon-button icon="favorite" slot="actionItems"></mwc-icon-button>
   </mwc-top-app-bar>
   <Container>
     <Pagination bind:items={books} collection={database}/>
   </Container>
+  <FormAdd bind:collection={database} bind:books={books} toggle={toggle} bind:open={open}/>
 </main>

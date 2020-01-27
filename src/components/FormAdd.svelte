@@ -1,11 +1,13 @@
 <script>
   import { form } from 'svelte-forms'
-  import { Row,Container } from 'sveltestrap'
+  import { Row,Container,Button,Modal,ModalBody,ModalFooter,ModalHeader,InputGroup,Label,FormGroup } from 'sveltestrap'
   import ImgEncoder from 'svelte-image-encoder';
   import PouchDB from 'pouchdb-browser'
+  import "@material/mwc-icon-button";
   export let collection;
   export let books;
-
+  export let open;
+  export let toggle;
   let src;
   let url;
  
@@ -56,54 +58,41 @@ const myForm = form(() => ({
     image: {value: url, validators:['required']}
     }));
 </script>
-<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Ajout d'un livre</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form>
-                <div class="modal-body">
-                    <Container>
-                        <div class="form-group">
-                            <label for="auteur">Auteur</label>
-                            <input id="auteur" type="text" class="form-control" bind:value={authorPut} class:valid={$myForm.author.valid} aria-describedby="auteur du livre">
-                        </div>
-                        <div class="form-group">
-                            <label for="titre">Titre</label>
-                            <input id="titre" type="text" class="form-control" bind:value={titlePut} class:valid={$myForm.title.valid} aria-describedby="auteur du livre">
-                        </div>
-                        <div class="form-group">
-                            <label for="prix">Prix</label>
-                            <div class="input-group">
-                                <input id="prix" type="number" class="form-control" bind:value={pricePut} class:valid={$myForm.price.valid} aria-describedby="le prix du livre">
-                                <div class="input-group-append">
-                                    <span class="input-group-text" id="basic-addon2">.00 €</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="url">Lien d'achat</label>
-                            <input id="url" type="text" class="form-control" bind:value={urlBuy} class:valid={$myForm.price.valid} aria-describedby="url d'achat du livre">
-                        </div>
-                        <Row class='justify-content-md-center'>
-                            <ImgEncoder {src} bind:url/>
-                        </Row>
-                        <Row class='justify-content-md-center'>
-                            <input on:change={loadFile} type='file' class:valid={$myForm.image.valid} >
-                        </Row>
-
-                    </Container>
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                    <button on:click={addBook} type='button' class="btn btn-success" disabled={!$myForm.valid}>Ajouter le livre</button>
-                </div>
+<Modal isOpen={open} {toggle}>
+    <ModalHeader {toggle}>Ajout d'un livre</ModalHeader>
+    <ModalBody>
+        <Container>
+        <form>
+            <FormGroup>
+                <Label for="auteur">Auteur</Label>
+                <input id="auteur" type="text" class="form-control" bind:value={authorPut} class:valid={$myForm.author.valid} aria-describedby="auteur du livre"/>
+            </FormGroup>
+            <FormGroup>
+                <Label for="titre">Titre</Label>
+                <input id="titre" type="text" class="form-control" bind:value={titlePut} class:valid={$myForm.title.valid} aria-describedby="auteur du livre"/>
+            </FormGroup>
+            <FormGroup>
+                <Label for="prix">Prix</Label>
+                <InputGroup>
+                    <input id="prix" class="form-control" bind:value={pricePut} class:valid={$myForm.price.valid} aria-describedby="le prix du livre"/>
+                    <span class="input-group-text" id="basic-addon2">€</span>
+                </InputGroup>
+            </FormGroup>
+            <FormGroup>
+                <Label for="url">Lien d'achat</Label>
+                <input id="url" type="text" class="form-control" bind:value={urlBuy} class:valid={$myForm.price.valid} aria-describedby="url d'achat du livre"/>
+            </FormGroup>
+            <Row class='justify-content-md-center'>
+                <ImgEncoder {src} bind:url/>
+            </Row>
+            <Row class='justify-content-md-center'>
+                <input on:change={loadFile} type='file' class:valid={$myForm.image.valid}/>
+            </Row>
             </form>
-        </div>
-    </div>
-</div>
+        </Container>
+     </ModalBody>
+    <ModalFooter>
+        <Button type="button" on:click={toggle}>Annuler</Button>
+        <Button on:click={addBook} type='button' class="btn btn-success" disabled={!$myForm.valid}>Ajouter le livre</Button>
+    </ModalFooter>
+</Modal>
