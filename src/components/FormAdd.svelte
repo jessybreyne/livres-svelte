@@ -1,6 +1,5 @@
 <script>
-  import { form } from 'svelte-forms'
-  import { Row,Container,Button,Modal,ModalBody,ModalFooter,ModalHeader,InputGroup,Label,FormGroup } from 'sveltestrap'
+  import { Row,Container,Button,Modal,ModalBody,ModalFooter,ModalHeader,InputGroup,Label,FormGroup,Alert } from 'sveltestrap'
   import ImgEncoder from 'svelte-image-encoder';
   import PouchDB from 'pouchdb-browser'
   import "@material/mwc-icon-button";
@@ -11,19 +10,21 @@
   let src;
   let url;
  
-  let titlePut='';
-  let authorPut='';
-  let image='';
-  let pricePut='';
-  let urlBuy='';
+  let titlePut;
+  let authorPut;
+  let image;
+  let pricePut;
+  let urlBuy;
+  let visible=false;
 
 function loadFile(e) {
     src = URL.createObjectURL(e.target.files[0]);
 }
 
 async function addBook(){
+    if (url && titlePut && authorPut && pricePut && urlBuy){
         let db= new PouchDB(collection)
-        let image = url.split(':');
+        image = url.split(':');
         image = image[1].split(';');
         image[1] = image[1].split(',')[1];
         await db.post({
@@ -48,51 +49,52 @@ async function addBook(){
         url = '';
         src = '';
         pricePut = '';
+        open=false;
     }
+    else{
+        visible=true;
+    }
+}
 
-const myForm = form(() => ({ 
-    author: { value: authorPut, validators: ['required']},
-    title: { value: titlePut, validators: ['required']},
-    price: { value: pricePut, validators: ['required']},
-    url: { value: urlBuy, validators: ['required','url']},
-    image: {value: url, validators:['required']}
-    }));
 </script>
 <Modal isOpen={open} {toggle}>
     <ModalHeader {toggle}>Ajout d'un livre</ModalHeader>
     <ModalBody>
         <Container>
+        <Alert color="danger" isOpen={visible} toggle={() => (visible = false)}>
+            Une information est invalide !
+        </Alert>
         <form>
             <FormGroup>
                 <Label for="auteur">Auteur</Label>
-                <input id="auteur" type="text" class="form-control" bind:value={authorPut} class:valid={$myForm.author.valid} aria-describedby="auteur du livre"/>
+                <input id="auteur" type="text" class="form-control" bind:value={authorPut} aria-describedby="auteur du livre" required/>
             </FormGroup>
             <FormGroup>
                 <Label for="titre">Titre</Label>
-                <input id="titre" type="text" class="form-control" bind:value={titlePut} class:valid={$myForm.title.valid} aria-describedby="auteur du livre"/>
+                <input id="titre" type="text" class="form-control" bind:value={titlePut} aria-describedby="auteur du livre" required/>
             </FormGroup>
             <FormGroup>
                 <Label for="prix">Prix</Label>
                 <InputGroup>
-                    <input id="prix" class="form-control" bind:value={pricePut} class:valid={$myForm.price.valid} aria-describedby="le prix du livre"/>
+                    <input id="prix" class="form-control" bind:value={pricePut} aria-describedby="le prix du livre" required/>
                     <span class="input-group-text" id="basic-addon2">€</span>
                 </InputGroup>
             </FormGroup>
             <FormGroup>
                 <Label for="url">Lien d'achat</Label>
-                <input id="url" type="text" class="form-control" bind:value={urlBuy} class:valid={$myForm.price.valid} aria-describedby="url d'achat du livre"/>
+                <input id="url" type="text" class="form-control" bind:value={urlBuy} aria-describedby="url d'achat du livre"/>
             </FormGroup>
             <Row class='justify-content-md-center'>
                 <ImgEncoder {src} bind:url/>
             </Row>
             <Row class='justify-content-md-center'>
-                <input on:change={loadFile} type='file' class:valid={$myForm.image.valid}/>
+                <input on:change={loadFile} type='file'/>
             </Row>
             </form>
         </Container>
      </ModalBody>
     <ModalFooter>
         <Button type="button" on:click={toggle}>Annuler</Button>
-        <Button on:click={addBook} type='button' class="btn btn-success" disabled={!$myForm.valid}>Ajouter le livre</Button>
+        <button on:click|preventDefault={addBook} type='submit' class='btn btn-success'>Ajouter le livre</button>
     </ModalFooter>
 </Modal>
