@@ -3,10 +3,9 @@
   import Graphique from "./Graphique.svelte";
   export let toggleChart;
   export let openChart;
-  export let sizeChart;
 
 </script>
-<Modal isOpen={openChart} {toggleChart} {sizeChart}>
+<Modal isOpen={openChart} {toggleChart}  class="modal-xl">
     <ModalHeader {toggleChart}>Les prix des livres</ModalHeader>
     <ModalBody>
         <Graphique/>

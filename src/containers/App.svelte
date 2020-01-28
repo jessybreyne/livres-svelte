@@ -14,12 +14,8 @@
   let database= "books";
   let open = false;
   let openChart = false;
-  let sizeChart;
   const toggle = () => (open = !open);
-  const toggleChart = () => {
-    sizeChart = "lg";
-    openChart = !openChart;
-    };
+  const toggleChart = () => (openChart = !openChart);
 
    function print(){
       window.print();
@@ -49,6 +45,6 @@
     <Pagination bind:items={books} collection={database}/>
   </Container>
   <FormAdd bind:collection={database} bind:books={books} toggle={toggle} bind:open={open}/>
-  <ModalChart toggleChart={toggleChart} bind:sizeChart={sizeChart} bind:openChart={openChart}/>
+  <ModalChart toggleChart={toggleChart} bind:openChart={openChart}/>
 </main>
 
