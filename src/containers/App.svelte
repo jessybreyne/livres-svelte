@@ -45,6 +45,6 @@
     <Pagination bind:items={books} collection={database}/>
   </Container>
   <FormAdd bind:collection={database} bind:books={books} toggle={toggle} bind:open={open}/>
-  <ModalChart toggleChart={toggleChart} bind:openChart={openChart}/>
+  <ModalChart toggleChart={toggleChart} bind:openChart={openChart} bind:books={books}/>
 </main>
 

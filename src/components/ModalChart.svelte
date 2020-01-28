@@ -3,12 +3,13 @@
   import Graphique from "./Graphique.svelte";
   export let toggleChart;
   export let openChart;
+  export let books;
 
 </script>
 <Modal isOpen={openChart} {toggleChart}  class="modal-xl">
     <ModalHeader {toggleChart}>Les prix des livres</ModalHeader>
     <ModalBody>
-        <Graphique/>
+        <Graphique bind:books={books}/>
      </ModalBody>
     <ModalFooter>
         <Button type="button" on:click={toggleChart}>Fermer</Button>
