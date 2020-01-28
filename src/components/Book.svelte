@@ -33,6 +33,12 @@
    bookEdit = book;
    open = true;
  }
+
+function redirection(url){
+   document.location.href=url;
+
+ }
+ 
 </script>
 
 
@@ -52,7 +58,7 @@
             Ecrit par {book.author} au prix de {book.price}
             <br>
             <button class="btn btn-danger" on:click={removeBook(book._id)}>Supprimer</button>
-            <a href='{book.url}' class="btn btn-success">Acheter</a>
+            <button class="btn btn-success" on:click={redirection(book.url)}>Acheter</button>
             <button class="btn btn-secondary" on:click={editBook(book)}>Editer</button>
         </div>
     </paper-card>

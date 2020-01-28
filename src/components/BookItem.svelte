@@ -2,6 +2,11 @@
   import { paginate, LightPaginationNav } from 'svelte-paginate'
   import { Col, Container, Row } from "sveltestrap";
   export let book;
+
+  function redirection(url){
+   document.location.href=url;
+
+ }
 </script>
 
 <style>
@@ -19,7 +24,7 @@
         <div class="card-content">
             Ecrit par {book.author} au prix de {book.price}
             <br>
-            <a href='{book.url}' class="btn btn-success">Acheter</a>
+            <button class="btn btn-success" on:click={redirection(book.url)}>Acheter</button>
         </div>
     </paper-card>
 </Col>
